@@ -7,6 +7,14 @@ import json
 import subprocess
 import time
 
+def is_port_in_use(port, host="127.0.0.1"):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex((host, port)) == 0
+
+if is_port_in_use(5000):
+    raise RuntimeError("Port 5000 is already in use. Please close existing process.")
+
+
 class HexapodEnv(gym.Env):
     def __init__(self):
         super().__init__()
@@ -32,6 +40,7 @@ class HexapodEnv(gym.Env):
         return np.zeros(30)  # Placeholder
 
     def step(self, action):
+        print("Step received.")
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
         data = self.conn.recv(4096)
         obs = json.loads(data.decode('utf-8'))

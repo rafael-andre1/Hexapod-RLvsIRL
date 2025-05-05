@@ -1,8 +1,38 @@
 import csv
 import math
 import os
+import socket
+import json
 
-print("Entered Python controller!!!")
+# Socket Initialization
+
+"""
+Este socket TCP (Transmission Control Protocol) permite troca de infomração bidirecional entre 2 ficheiros de python.
+Para evitar correr a simulação inteira na UI do webots, utilizamos este socket para treinar apenas em python.
+Essencialmente, o environment de gymnasium cria um servidor local, ao qual `controller.py` vai aceder.
+
+# -------- Fluxo -------- #
+
+A cada passo (step()):
+
+ - Gym envia uma ação para o Webots pelo socket
+
+ - Webots aplica valores nos actuators (motores)
+
+ - Webots lê sensores e envia de volta a observação (estado atual)
+
+ - Gym recebe valores, calcula reward
+  
+ - Com base na reward, gym decide o próximo passo
+"""
+
+HOST = '127.0.0.1'
+PORT = 5000
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((HOST, PORT))
+
+
+print("Entered RL Controller.")
 
 #os.environ["WEBOTS_HOME"] = '/usr/local/webots'
 
@@ -36,7 +66,7 @@ def main():
     if imu is not None:
         imu.enable(timestep)
 
-    # Foot contact sensors (assumed names)
+    # Foot contact sensors (NOT YET IMPLEMENTED)
     foot_contact_names = ["foot_contact1", "foot_contact2", "foot_contact3",
                           "foot_contact4", "foot_contact5", "foot_contact6"]
     foot_contacts = [robot.getDevice(name) for name in foot_contact_names]
@@ -49,6 +79,8 @@ def main():
         robot_node = robot.getSelf()
         # Typically, the robot's position is stored in "translation"
         com_field = robot_node.getField("translation")
+
+    """
 
     # Gait parameters
     f = 0.5  # frequency [Hz]
@@ -70,64 +102,53 @@ def main():
     dF = 0.8
     dT = -2.4
     d = [-dC, dF, dT, 0.0, dF, dT, dC, dF, dT, dC, dF, dT, 0.0, dF, dT, -dC, dF, dT]
+    
+    """
 
-    # Open a CSV file to log all sensor data
-    with open("exper_data.csv", mode='w', newline="") as csvfile:
-        csv_writer = csv.writer(csvfile)
-        # Build CSV header:
-        header = ["time"]
-        # Use the actual motor device names for clarity
-        header += motor_names
-        header += ["imu_roll", "imu_pitch", "imu_yaw"]
-        header += ["joint_sensor{}".format(i+1) for i in range(len(joint_sensors))]
-        header += foot_contact_names
-        header += ["com_x", "com_y", "com_z"]
-        csv_writer.writerow(header)
+    # Main simulation loop
+    while robot.step(timestep) != -1:
+        # Receive motor positions, command motors
+        data = sock.recv(4096)
+        action = json.loads(data.decode('utf-8'))
 
-        # Main simulation loop
-        while robot.step(timestep) != -1:
-            current_time = robot.getTime()
-            row = [current_time]
+        for i in range(18):
+            motors[i].setPosition(action[i])
 
-            # Compute motor positions, command motors, and log positions
-            motor_positions = []
-            for i in range(18):
-                pos = a[i] * math.sin(2.0 * math.pi * f * current_time + p[i]) + d[i]
-                motors[i].setPosition(pos)
-                motor_positions.append(pos)
-            row += motor_positions
+        # Read IMU values (roll, pitch, yaw)
+        imu_values = [None, None, None]
+        if imu is not None:
+            imu_values = imu.getRollPitchYaw()
 
-            # Read IMU values (roll, pitch, yaw)
-            imu_values = [None, None, None]
-            if imu is not None:
-                imu_values = imu.getRollPitchYaw()
-            row += imu_values
+        # Read joint sensor values
+        joint_values = []
+        for sensor in joint_sensors:
+            if sensor is not None:
+                joint_values.append(sensor.getValue())
+            else:
+                joint_values.append(None)
 
-            # Read joint sensor values
-            joint_values = []
-            for sensor in joint_sensors:
-                if sensor is not None:
-                    joint_values.append(sensor.getValue())
-                else:
-                    joint_values.append(None)
-            row += joint_values
+        # Read foot contact sensor values
+        foot_values = []
+        for sensor in foot_contacts:
+            if sensor is not None:
+                foot_values.append(sensor.getValue())
+            else:
+                foot_values.append(None)
 
-            # Read foot contact sensor values
-            foot_values = []
-            for sensor in foot_contacts:
-                if sensor is not None:
-                    foot_values.append(sensor.getValue())
-                else:
-                    foot_values.append(None)
-            row += foot_values
-
-            # Get center of mass approximation (using the robot's translation field)
-            com = [None, None, None]
-            if is_supervisor and com_field is not None:
+        # Get center of mass approximation (using the robot's translation field)
+        com = [None, None, None]
+        if is_supervisor:
+            if com_field is not None:
                 com = com_field.getSFVec3f()
-            row += com
 
-            csv_writer.writerow(row)
+        observation = {
+            "joint_sensors": joint_values,
+            "imu": imu_values,
+            "foot_contacts": foot_values,
+            "com": com
+        }
+        sock.sendall(json.dumps(observation).encode('utf-8'))
+
 
 if __name__ == "__main__":
     main()

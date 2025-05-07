@@ -3,6 +3,8 @@ import math
 import os
 import socket
 import json
+import random
+import time
 
 # Socket Initialization
 
@@ -26,10 +28,27 @@ A cada passo (step()):
  - Com base na reward, gym decide o próximo passo
 """
 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 HOST = '127.0.0.1'
 PORT = 5000
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((HOST, PORT))
+MAX_RETRIES = 50
+WAIT = 0.5  # seconds
+
+connected = False
+for attempt in range(MAX_RETRIES):
+    try:
+        sock.connect((HOST, PORT))
+        connected = True
+        print("[Controller] Connected to RL environment.")
+        break
+    except ConnectionRefusedError:
+        print(f"[Controller] Waiting for RL environment... Attempt {attempt+1}")
+        time.sleep(WAIT)
+
+if not connected:
+    print("[Controller] Could not connect to RL environment after several attempts. Exiting.")
+    exit(1)
 
 
 print("Entered RL Controller.")
@@ -54,12 +73,17 @@ def main():
     ]
     motors = [robot.getDevice(name) for name in motor_names]
 
+    """
+
     # Retrieve joint position sensors (assumed names: "ps_<motor_name>")
-    joint_sensor_names = ["ps_" + name for name in motor_names]
+    #joint_sensor_names = ["ps_" + name for name in motor_names]
+    joint_sensor_names = ["RPC", "RAC", "RMC","LMC","LAC","LPC"]
     joint_sensors = [robot.getDevice(name) for name in joint_sensor_names]
     for sensor in joint_sensors:
         if sensor is not None:
             sensor.enable(timestep)
+
+    
 
     # IMU device (ensure the correct name: update if necessary)
     imu = robot.getDevice("integral unit")
@@ -73,6 +97,8 @@ def main():
     for sensor in foot_contacts:
         if sensor is not None:
             sensor.enable(timestep)
+            
+    """
 
     # If using Supervisor mode for COM, get the COM via the "translation" field:
     if is_supervisor:
@@ -108,12 +134,20 @@ def main():
     # Main simulation loop
     while robot.step(timestep) != -1:
         # Receive motor positions, command motors
-        data = sock.recv(4096)
-        action = json.loads(data.decode('utf-8'))
+        try:
+            data = sock.recv(4096)
+            if not data:
+                print("[Controller] Socket fechado ou vazio.")
+                break
+            action = json.loads(data.decode('utf-8'))
+        except json.JSONDecodeError:
+            print("[Controller] JSON inválido, a tentar novamente...")
+            continue
 
         for i in range(18):
             motors[i].setPosition(action[i])
 
+        """
         # Read IMU values (roll, pitch, yaw)
         imu_values = [None, None, None]
         if imu is not None:
@@ -146,6 +180,13 @@ def main():
             "imu": imu_values,
             "foot_contacts": foot_values,
             "com": com
+        }"""
+
+        observation = {
+            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
+            "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
+            "foot_contacts": [random.randint(0, 1) for _ in range(6)],
+            "com": [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]
         }
         sock.sendall(json.dumps(observation).encode('utf-8'))
 

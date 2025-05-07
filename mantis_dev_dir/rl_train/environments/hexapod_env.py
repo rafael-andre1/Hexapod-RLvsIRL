@@ -16,54 +16,142 @@ if is_port_in_use(5000):
 
 
 class HexapodEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, task='walk'):
         super().__init__()
+        self.task = task
+        # Action space -> 18 actuators
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(18,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(len(self.get_initial_observation()),), dtype=np.float32)
 
-        # Starts Webots with supervisor
+        # Observation Space -> 30 values
+
+        """
+          - Actuator position readings: 18
+ 
+          - IMU (angle + acceleration): 2
+ 
+          - Foot contacts: 6
+ 
+          - Center of mass (3D vector): 3
+        
+        """
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(30,), dtype=np.float32)
+
+        # Start Webots simulation
         self.webots_process = subprocess.Popen([
             r"C:\Users\hasht\AppData\Local\Programs\Webots\msys64\mingw64\bin\webots.exe",
             "--stdout",
-            "--no-rendering",
+            # "--no-rendering",
             "worlds/mantis.wbt"
         ])
-        time.sleep(5)
+        time.sleep(10)
 
-        # Socket server (init)
+        # Set up socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind(('127.0.0.1', 5000))
         self.sock.listen(1)
-        self.conn, _ = self.sock.accept()
+        # Espera ativa por conexão do controlador
+        while True:
+            try:
+                print("Awaiting controller socket link...")
+                self.conn, _ = self.sock.accept()
+                break
+            except socket.error:
+                time.sleep(0.1)
+
+        self.prev_com = None
+        self.prev_pos = 0
+        self.total_steps = 0
 
     def get_initial_observation(self):
         return np.zeros(30)  # Placeholder
 
+    def compute_rewards(self, obs):
+        imu_data = obs['imu']  # [theta, acc]
+        com = obs['com']       # [x, y, z]
+        foot_contacts = obs['foot_contacts']  # e.g., [0, 1, 1, 0, 1, 1]
+
+        theta, acc = imu_data[0], imu_data[1]
+        com_height = com[2]
+
+        # Reward depends on task
+        if self.task == 'stand_up':
+            h_base = 1.0  # assume nominal height
+            vcom = abs(com_height - h_base) / h_base
+            reward = 1.0 - vcom
+            done = vcom > 0.3
+        elif self.task == 'walk':
+            dx = com[0] - self.prev_com[0] if self.prev_com else 0
+            stability = abs(theta) + abs(acc)
+            reward = dx - 0.1 * stability
+            done = stability > 5.0
+        elif self.task == 'climb':
+            delta_step = 1 if com[2] > self.prev_com[2] + 0.05 else 0
+            reward = delta_step
+            done = delta_step == 0 and self.total_steps > 10
+        else:
+            reward = 0
+            done = False
+
+        self.prev_com = com
+        return reward, done
+
     def step(self, action):
-        print("Step received.")
+        # Sends actions into Webots
+        print(f"Ação recebida: {action}")
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
+
+        # Pulls readings after actions
         data = self.conn.recv(4096)
         obs = json.loads(data.decode('utf-8'))
 
+        # Transforms into numpy array for efficiency of reward calculations
         observation = np.array(
             obs['joint_sensors'] + obs['imu'] + obs['foot_contacts'] + obs['com'],
             dtype=np.float32
         )
 
-        # NEEDS REWARD DEFINITION
-        reward = obs['com'][0]  # recompensa por mover-se no eixo x
-        done = False  # ou define condições de término
+        print("Joint sensors:", obs['joint_sensors'])
+        print("IMU:", obs['imu'])
+        print("Foot contacts:", obs['foot_contacts'])
+        print("Center of mass:", obs['com'])
+
+        reward, done = self.compute_rewards(obs)
+        self.total_steps += 1
 
         return observation, reward, done, False, {}
 
     def reset(self, seed=None, options=None):
-        self.conn.close()
-        self.sock.close()
-        self.webots_process.terminate()
+        if hasattr(self, 'conn'):
+            self.conn.close()
+        if hasattr(self, 'sock'):
+            self.sock.close()
+            """
+        if hasattr(self, 'webots_process'):
+            self.webots_process.terminate()
+            """
+
         time.sleep(2)
-        return self.__init__().reset()
+        task = options.get('task', 'walk') if options else 'walk'
+        return HexapodEnv(task=task).reset()
 
     def close(self):
-        self.conn.close()
+        if hasattr(self, 'conn'):
+            self.conn.close()
+        if hasattr(self, 'sock'):
+            self.sock.close()
+        #if hasattr(self, 'webots_process'):
+            #self.webots_process.terminate()
+
+
+"""
+def close(self):
+    if hasattr(self, 'sock'):
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
         self.sock.close()
+    if hasattr(self, 'webots_process'):
         self.webots_process.terminate()
+        self.webots_process.wait()
+"""

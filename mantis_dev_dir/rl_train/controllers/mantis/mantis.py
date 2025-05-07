@@ -131,15 +131,36 @@ def main():
     
     """
 
+    reset_done = False  # flag inicial
+
     # Main simulation loop
     while robot.step(timestep) != -1:
         # Receive motor positions, command motors
         try:
             data = sock.recv(4096)
             if not data:
-                print("[Controller] Socket fechado ou vazio.")
-                break
-            action = json.loads(data.decode('utf-8'))
+                print("[Controller] Socket fechado ou vazio. A gerar ação aleatória...")
+                # Em vez de quebrar o loop, envia observações dummy e continua
+                fake_obs = [random.uniform(-1.0, 1.0) for _ in range(29)]
+                sock.sendall(json.dumps(fake_obs).encode('utf-8'))
+                continue
+
+            message = json.loads(data.decode('utf-8'))
+
+            # Verifica se é um comando especial (como reset)
+            if isinstance(message, dict) and message.get("command") == "reset":
+                print("[Controller] Reset em curso...")
+                reset_done = True
+                if is_supervisor:
+                    robot_node.getField("translation").setSFVec3f([0, 0, 0.02])
+                    robot_node.getField("rotation").setSFRotation([1, 0, 0, 1.57])
+                    for motor in motors:
+                        motor.setPosition(float('inf'))
+                continue  # Volta ao início da loop, sem executar ação
+
+            # Se não for comando, assume que é uma lista de ações
+            action = message
+
         except json.JSONDecodeError:
             print("[Controller] JSON inválido, a tentar novamente...")
             continue

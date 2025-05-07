@@ -22,7 +22,7 @@ class HexapodEnv(gym.Env):
         # Action space -> 18 actuators
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(18,), dtype=np.float32)
 
-        # Observation Space -> 30 values
+        # Observation Space -> 29 values
 
         """
           - Actuator position readings: 18
@@ -34,7 +34,7 @@ class HexapodEnv(gym.Env):
           - Center of mass (3D vector): 3
         
         """
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(30,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(29,), dtype=np.float32)
 
         # Start Webots simulation
         self.webots_process = subprocess.Popen([
@@ -63,7 +63,7 @@ class HexapodEnv(gym.Env):
         self.total_steps = 0
 
     def get_initial_observation(self):
-        return np.zeros(30)  # Placeholder
+        return np.zeros(29)  # Placeholder
 
     def compute_rewards(self, obs):
         imu_data = obs['imu']  # [theta, acc]
@@ -93,11 +93,11 @@ class HexapodEnv(gym.Env):
             done = False
 
         self.prev_com = com
-        return reward, done
+        return reward, done 
 
     def step(self, action):
         # Sends actions into Webots
-        print(f"Ação recebida: {action}")
+        #print(f"Ação recebida!")
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
 
         # Pulls readings after actions
@@ -110,10 +110,12 @@ class HexapodEnv(gym.Env):
             dtype=np.float32
         )
 
+        """
         print("Joint sensors:", obs['joint_sensors'])
         print("IMU:", obs['imu'])
         print("Foot contacts:", obs['foot_contacts'])
         print("Center of mass:", obs['com'])
+        """
 
         reward, done = self.compute_rewards(obs)
         self.total_steps += 1
@@ -121,18 +123,15 @@ class HexapodEnv(gym.Env):
         return observation, reward, done, False, {}
 
     def reset(self, seed=None, options=None):
-        if hasattr(self, 'conn'):
-            self.conn.close()
-        if hasattr(self, 'sock'):
-            self.sock.close()
-            """
-        if hasattr(self, 'webots_process'):
-            self.webots_process.terminate()
-            """
+        self.total_steps = 0
+        self.prev_com = None
 
-        time.sleep(2)
-        task = options.get('task', 'walk') if options else 'walk'
-        return HexapodEnv(task=task).reset()
+        # Se precisares de reiniciar algo em Webots, podes definir um comando aqui (ex: 'reset')
+        self.conn.sendall(json.dumps({'command': 'reset'}).encode('utf-8'))
+
+        # Recebe observação inicial falsa ou real
+        initial_obs = np.zeros(29, dtype=np.float32)
+        return initial_obs, {}
 
     def close(self):
         if hasattr(self, 'conn'):

@@ -1,10 +1,8 @@
-import csv
-import math
-import os
 import socket
 import json
 import random
 import time
+from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, TouchSensor
 
 # Socket Initialization
 
@@ -54,8 +52,6 @@ if not connected:
 print("Entered RL Controller.")
 
 #os.environ["WEBOTS_HOME"] = '/usr/local/webots'
-
-from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, TouchSensor
 
 def main():
     robot = Robot()
@@ -135,30 +131,35 @@ def main():
 
     # Main simulation loop
     while robot.step(timestep) != -1:
-        # Receive motor positions, command motors
+
+        # Receive motor positions, apply actions
+
+        # ---------- Receive Action ---------- #
         try:
             data = sock.recv(4096)
             if not data:
-                print("[Controller] Socket fechado ou vazio. A gerar ação aleatória...")
-                # Em vez de quebrar o loop, envia observações dummy e continua
+                print("[Controller] Socket closed or empty. Generating random action...")
                 fake_obs = [random.uniform(-1.0, 1.0) for _ in range(29)]
                 sock.sendall(json.dumps(fake_obs).encode('utf-8'))
                 continue
 
             message = json.loads(data.decode('utf-8'))
 
-            # Verifica se é um comando especial (como reset)
+
+            # ---------- Reset Pose ---------- #
+
+            # TODO: Checks for reset (lazy!!!)
             if isinstance(message, dict) and message.get("command") == "reset":
                 print("[Controller] Reset em curso...")
                 reset_done = True
                 if is_supervisor:
                     robot_node.getField("translation").setSFVec3f([0, 0, 0.02])
                     robot_node.getField("rotation").setSFRotation([1, 0, 0, 1.57])
-                    for motor in motors:
-                        motor.setPosition(float('inf'))
-                continue  # Volta ao início da loop, sem executar ação
+                    for motor in motors: motor.setPosition(float('inf'))
+                continue  
 
-            # Se não for comando, assume que é uma lista de ações
+        # ---------- Apply Action ---------- #    
+
             action = message
 
         except json.JSONDecodeError:
@@ -167,6 +168,8 @@ def main():
 
         for i in range(18):
             motors[i].setPosition(action[i])
+
+        # ---------- Sensor Readings ---------- #
 
         """
         # Read IMU values (roll, pitch, yaw)
@@ -203,6 +206,8 @@ def main():
             "com": com
         }"""
 
+
+        # TODO: Currently random!!!
         observation = {
             "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
             "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],

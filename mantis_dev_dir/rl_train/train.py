@@ -4,7 +4,9 @@ from stable_baselines3 import PPO
 from tqdm import tqdm
 from stable_baselines3.common.callbacks import BaseCallback
 
+import torch
 
+# Custom callbacks (times function for runtime prediction)
 class TqdmCallback(BaseCallback):
     def __init__(self):
         super().__init__()
@@ -22,8 +24,19 @@ class TqdmCallback(BaseCallback):
         self.progress_bar = None
 
 
+# -------------------------- Training -------------------------- #
+
+# Environment setup
 env = HexapodEnv()
-model = PPO("MlpPolicy", env, verbose=1)
+
+# Select gpu if available, otherwise cpu
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+
+# Model choice
+model = PPO("MlpPolicy", env, verbose=1, device=device)
+
+# Model training
 model.learn(total_timesteps=10000, callback=TqdmCallback())
 model.save("hexapod_ppo_model")
 env.close()

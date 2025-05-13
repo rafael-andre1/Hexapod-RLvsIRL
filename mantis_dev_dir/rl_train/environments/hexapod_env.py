@@ -19,7 +19,7 @@ if is_port_in_use(5000):
 
 
 class HexapodEnv(gym.Env):
-    def __init__(self, task='walk'):
+    def __init__(self, task='stand_up'):
         super().__init__()
         self.task = task
         # Action space -> 18 actuators
@@ -40,12 +40,13 @@ class HexapodEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(29,), dtype=np.float32)
 
         # Start Webots simulation
-        webots_cmd = os.environ.get("WEBOTS_CMD", "webots")
+        # webots_cmd = os.environ.get("WEBOTS_CMD", "webots")
+        webots_cmd = r"C:\Users\hasht\AppData\Local\Programs\Webots\msys64\mingw64\bin\webots.exe"
 
         self.webots_process = subprocess.Popen([
             webots_cmd,
             "--stdout",
-            os.path.join(os.path.dirname(__file__), "../../worlds/mantis.wbt")
+            "worlds/mantis.wbt"
         ])
         time.sleep(5)
 
@@ -68,6 +69,9 @@ class HexapodEnv(gym.Env):
         self.prev_pos = 0
         self.total_steps = 0
 
+        # TODO: add stability counter functionality
+        self.stable_counter = 0
+
     def get_initial_observation(self):
         # TODO: Currently not used, should be straightforward to define
         # as the starting point should be easy to generate
@@ -82,7 +86,7 @@ class HexapodEnv(gym.Env):
         # or when it has achieved what we are looking for? both?
         # If good -> nothing else to learn
         # If terrible for a long time -> fresh start
-        if (step_count >= max_steps) or (com is not None and com[2] < 0.015):
+        if (step_count >= max_steps):
             return True
         return False
 
@@ -91,6 +95,7 @@ class HexapodEnv(gym.Env):
         imu_data = obs['imu']  # [theta, acc]
         com = obs['com']       # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
+        lidar_values = obs['lidar']
 
         theta, acc = imu_data[0], imu_data[1]
         com_height = com[2]
@@ -98,16 +103,33 @@ class HexapodEnv(gym.Env):
         # TODO: needs fine tuning and actual sensor values 
         # Reward depends on task
         if self.task == 'stand_up':
-            h_base = 1.0  # assuming h=1 as acceptable height
-            vcom = abs(com_height - h_base) / h_base
-            reward = 1.0 - vcom
-            # done = vcom > 0.3
+            h_base = 62
+            print("Robot lidar height: ", max(lidar_values))
+            vcom = abs(max(lidar_values) - h_base) / h_base
+            reward = 1 - vcom
 
         elif self.task == 'walk':
-            dx = com[0] - self.prev_com[0] if self.prev_com else 0
-            stability = abs(theta) + abs(acc)
-            reward = dx - 0.1 * stability
-            # done = stability > 5.0
+            # === BASE HEIGHT ===
+            h_base = 1.0  # expected standing height
+            h_error = abs(com_height - h_base)
+
+            # Reward for being upright (standing height)
+            reward_height = max(0.0, 1.0 - h_error / 0.2)  # normalized (0 to 1), tolerant to ±0.2m
+
+            # === STABILITY ===
+            max_theta = 0.5  # radians (≈28°)
+            reward_stability = max(0.0, 1.0 - abs(theta) / max_theta)
+
+            # === CONTACT POINTS ===
+            feet_on_ground = sum(1 for contact in foot_contacts if contact > 0.5)  # threshold to avoid noise
+            reward_feet = feet_on_ground / 6.0  # encourage all feet on ground
+
+            # === FINAL REWARD ===
+            reward = (
+                    0.5 * reward_height +  # prioritize height
+                    0.3 * reward_stability +  # stability also matters
+                    0.2 * reward_feet  # contact is important but less critical
+            )
 
         elif self.task == 'climb':
             delta_step = 1 if com[2] > self.prev_com[2] + 0.05 else 0
@@ -119,6 +141,7 @@ class HexapodEnv(gym.Env):
             # done = False
 
         self.prev_com = com
+        print(reward)
         return reward 
 
     def step(self, action):
@@ -159,7 +182,23 @@ class HexapodEnv(gym.Env):
 
         # TODO: how do I only reset position every episode instead of iteration
         # efficiently? Currently lazy and maybe incorrect implementation in the controller.
-        self.conn.sendall(json.dumps({'command': 'reset'}).encode('utf-8'))
+        self.conn.sendall((json.dumps({'command': 'reset'}) + "\n").encode('utf-8'))
+
+        # Wait for "reset_complete" confirmation
+        buffer = ""
+        while True:
+            data = self.conn.recv(4096).decode('utf-8')
+            buffer += data
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                if not line.strip():
+                    continue
+                msg = json.loads(line)
+                if isinstance(msg, dict) and msg.get("status") == "reset_complete":
+                    break
+            else:
+                continue
+            break
 
         # TODO: how do I pull original positions for every reset?
         initial_obs = np.zeros(29, dtype=np.float32)

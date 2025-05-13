@@ -1,4 +1,5 @@
 import socket
+import math
 import json
 import random
 import time
@@ -55,88 +56,68 @@ print("Entered RL Controller.")
 
 def main():
     robot = Supervisor()
+    #robot = Robot()
     timestep = int(robot.getBasicTimeStep())
     is_supervisor = hasattr(robot, 'getSelf')
 
-    # Define motor device names (following convention: side (R/L), position (A/M/P), joint (C/F/T))
-    motor_names = [
-        "RPC", "RPF", "RPT",
-        "RMC", "RMF", "RMT",
-        "RAC", "RAF", "RAT",
-        "LPC", "LPF", "LPT",
-        "LMC", "LMF", "LMT",
-        "LAC", "LAF", "LAT"
+    # --------------- Lidar Initialiaztion ---------------- #
+
+    lidar = robot.getDevice("lidar")
+    lidar.enable(timestep)
+    lidar.enablePointCloud()
+
+
+    # --------------- Motor and Joint Sensor Initialization --------------- #
+    MOTOR_NAMES = [
+        "RPC", "RPF", "RPT", "RMC", "RMF", "RMT", "RAC", "RAF", "RAT",
+        "LPC", "LPF", "LPT", "LMC", "LMF", "LMT", "LAC", "LAF", "LAT"
     ]
-    motors = [robot.getDevice(name) for name in motor_names]
+    motors, joint_sensors = [], []
+    for name in MOTOR_NAMES:
+        m = robot.getDevice(name)
+        ps = m.getPositionSensor()
+        if ps:  ps.enable(timestep)
+        motors.append(m)
+        joint_sensors.append(ps)
 
+    # --------------- IMU  --------------- #
+    imu = robot.getDevice("inertial unit")
+    #gyro = robot.getDevice("gyro")
+    #acc = robot.getDevice("accelerometer")
     """
+    for s in (imu, gyro, acc):
+        if s:
+            s.enable(timestep)"""
+    imu.enable(timestep)
 
-    # Retrieve joint position sensors (assumed names: "ps_<motor_name>")
-    #joint_sensor_names = ["ps_" + name for name in motor_names]
-    joint_sensor_names = ["RPC", "RAC", "RMC","LMC","LAC","LPC"]
-    joint_sensors = [robot.getDevice(name) for name in joint_sensor_names]
-    for sensor in joint_sensors:
-        if sensor is not None:
-            sensor.enable(timestep)
+    # --------------- Foot Contact Sensors --------------- #
+    FOOT_NAMES = ["LAS", "LMS", "LPS", "RAS", "RMS", "RPS"]
+    feet = []
+    for name in FOOT_NAMES:
+        ts = robot.getDevice(name)
+        if ts:
+            ts.enable(timestep)
+        else:
+            print(f"[warn] foot sensor {name} not found")
+        feet.append(ts)
 
-    
-
-    # IMU device (ensure the correct name: update if necessary)
-    imu = robot.getDevice("integral unit")
-    if imu is not None:
-        imu.enable(timestep)
-
-    # Foot contact sensors (NOT YET IMPLEMENTED)
-    foot_contact_names = ["foot_contact1", "foot_contact2", "foot_contact3",
-                          "foot_contact4", "foot_contact5", "foot_contact6"]
-    foot_contacts = [robot.getDevice(name) for name in foot_contact_names]
-    for sensor in foot_contacts:
-        if sensor is not None:
-            sensor.enable(timestep)
-            
-    """
-
-    # If using Supervisor mode for COM, get the COM via the "translation" field:
+    # --------------- Center Of Mass --------------- #
     if is_supervisor:
         robot_node = robot.getSelf()
-        # Typically, the robot's position is stored in "translation"
-        com_field = robot_node.getField("translation")
+    else: robot_node = None
 
-    """
+                                # ---------------------------------------------------- #
+                                # --------------- Main Simulation Loop --------------- #
+                                # ---------------------------------------------------- #
 
-    # Gait parameters
-    f = 0.5  # frequency [Hz]
 
-    # Amplitudes [rad]
-    aC = 0.25  # base motors
-    aF = 0.2   # shoulder motors
-    aT = 0.05  # knee motors
-    a = [aC, aF, -aT, -aC, -aF, aT, aC, aF, -aT, aC, -aF, aT, -aC, aF, -aT, aC, -aF, aT]
-
-    # Phases [s]
-    pC = 0.0
-    pF = 2.0
-    pT = 2.5
-    p = [pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT]
-
-    # Offsets [rad]
-    dC = 0.6
-    dF = 0.8
-    dT = -2.4
-    d = [-dC, dF, dT, 0.0, dF, dT, dC, dF, dT, dC, dF, dT, 0.0, dF, dT, -dC, dF, dT]
-    
-    """
-
-    reset_done = False  # flag inicial
-
-    # Main simulation loop
     while robot.step(timestep) != -1:
 
         # Receive motor positions, apply actions
+        data = sock.recv(4096)
 
         # ---------- Receive Action ---------- #
         try:
-            data = sock.recv(4096)
             if not data:
                 print("[Controller] Socket closed or empty. Generating random action...")
                 fake_obs = [random.uniform(-1.0, 1.0) for _ in range(29)]
@@ -148,22 +129,28 @@ def main():
 
             # ---------- Reset Pose ---------- #
 
-            # TODO: Checks for reset (lazy!!!)
+            # TODO: Random resets
             if isinstance(message, dict) and message.get("command") == "reset":
                 print("[Controller] Reset em curso...")
-                reset_done = True
                 if is_supervisor:
+                    robot.simulationReset()
+                    """
                     robot_node.getField("translation").setSFVec3f([0, 0, 0.02])
                     robot_node.getField("rotation").setSFRotation([1, 0, 0, 1.57])
-                    for motor in motors: motor.setPosition(float('inf'))
+                    for motor in motors: motor.setPosition(float('0'))
+                    """
+
+                sock.sendall((json.dumps({"status": "reset_complete"}) + "\n").encode("utf-8"))
                 continue  
 
         # ---------- Apply Action ---------- #    
 
             action = message
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             print("[Controller] JSON inválido, a tentar novamente...")
+            print(e)
+            print(data)
             continue
 
         for i in range(18):
@@ -171,49 +158,55 @@ def main():
 
         # ---------- Sensor Readings ---------- #
 
-        """
-        # Read IMU values (roll, pitch, yaw)
-        imu_values = [None, None, None]
-        if imu is not None:
-            imu_values = imu.getRollPitchYaw()
+        # IMU
+        roll, p, y = imu.getRollPitchYaw() if imu else (0.0, 0.0, 0.0)
+        # ax, ay, az = acc.getValues() if acc else (0.0, 0.0, 0.0)
+        #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
+        #imu_values = [roll, acc_norm]
 
-        # Read joint sensor values
+        # Read joint sensor position values
         joint_values = []
         for sensor in joint_sensors:
-            if sensor is not None:
-                joint_values.append(sensor.getValue())
-            else:
-                joint_values.append(None)
+            if sensor is not None: joint_values.append(sensor.getValue())
+            else: joint_values.append(None)
 
         # Read foot contact sensor values
-        foot_values = []
-        for sensor in foot_contacts:
-            if sensor is not None:
-                foot_values.append(sensor.getValue())
-            else:
-                foot_values.append(None)
+        foot_values = [ts.getValue() for ts in feet]
 
         # Get center of mass approximation (using the robot's translation field)
-        com = [None, None, None]
-        if is_supervisor:
-            if com_field is not None:
-                com = com_field.getSFVec3f()
+        com = robot_node.getCenterOfMass()
 
+        # TODO: Can't send via json!!!
+        point_cloud = lidar.getPointCloud()
+        lidar_values = [[p.x, p.y, p.z] for p in point_cloud]
+
+
+        # TODO: Currently random for joint sensors!!!
         observation = {
-            "joint_sensors": joint_values,
-            "imu": imu_values,
+            # joint positions
+            #"joint_sensors": joint_values,
+            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
+
+            # roll and acceleration
+            # "imu": imu_values,
+            "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
+
+            # foot contact sensor values
             "foot_contacts": foot_values,
-            "com": com
-        }"""
 
+            # center of mass (x,y,z)
+            "com": com,
 
-        # TODO: Currently random!!!
+            "lidar": [[p.x, p.y, p.z] for p in point_cloud]
+        }
+
+        """
         observation = {
             "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
             "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
             "foot_contacts": [random.randint(0, 1) for _ in range(6)],
             "com": [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]
-        }
+        }"""
         sock.sendall(json.dumps(observation).encode('utf-8'))
 
 

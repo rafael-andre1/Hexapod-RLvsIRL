@@ -1369,5 +1369,4 @@ Robot {
     ]
   }
   controller "<extern>"
-  supervisor TRUE
 }

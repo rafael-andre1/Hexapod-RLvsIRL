@@ -1,6 +1,7 @@
 # environments/hexapod_env.py
 import gymnasium as gym
 from gymnasium import spaces
+import os
 import numpy as np
 import socket
 import json
@@ -39,11 +40,12 @@ class HexapodEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(29,), dtype=np.float32)
 
         # Start Webots simulation
+        webots_cmd = os.environ.get("WEBOTS_CMD", "webots")
+
         self.webots_process = subprocess.Popen([
-            r"C:\Users\hasht\AppData\Local\Programs\Webots\msys64\mingw64\bin\webots.exe",
+            webots_cmd,
             "--stdout",
-            # "--no-rendering",
-            "worlds/mantis.wbt"
+            os.path.join(os.path.dirname(__file__), "../../worlds/mantis.wbt")
         ])
         time.sleep(5)
 

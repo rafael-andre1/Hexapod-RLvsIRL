@@ -54,7 +54,7 @@ print("Entered RL Controller.")
 #os.environ["WEBOTS_HOME"] = '/usr/local/webots'
 
 def main():
-    robot = Robot()
+    robot = Supervisor()
     timestep = int(robot.getBasicTimeStep())
     is_supervisor = hasattr(robot, 'getSelf')
 

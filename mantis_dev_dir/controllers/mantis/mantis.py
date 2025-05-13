@@ -1,133 +1,102 @@
-import csv
-import math
-import os
+from controller import Robot, Supervisor
+import csv, math
 
-print("Entered Python controller!!!")
+# ───────────────────────────── user params ────────────────────────────────
+FREQ_HZ  = 0.5                    # tripod‑gait frequency
+CSV_FILE = "expert_data.csv"      # where to store the log
+# ──────────────────────────────────────────────────────────────────────────
 
-#os.environ["WEBOTS_HOME"] = '/usr/local/webots'
+print("Mantis expert logger started.")
 
-from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, TouchSensor
+robot     = Supervisor()
+TIMESTEP  = int(robot.getBasicTimeStep())
+is_super  = hasattr(robot, "getSelf")
 
-def main():
-    robot = Robot()
-    timestep = int(robot.getBasicTimeStep())
-    is_supervisor = hasattr(robot, 'getSelf')
+# ─────────────── motors and their encoders ────────────────
+MOTOR_NAMES = [
+    "RPC","RPF","RPT",  "RMC","RMF","RMT",  "RAC","RAF","RAT",
+    "LPC","LPF","LPT",  "LMC","LMF","LMT",  "LAC","LAF","LAT"
+]
+motors, encoders = [], []
+for name in MOTOR_NAMES:
+    m  = robot.getDevice(name)
+    ps = m.getPositionSensor() if m else None
+    if ps:  ps.enable(TIMESTEP)
+    motors.append(m)
+    encoders.append(ps)
 
-    # Define motor device names (following convention: side (R/L), position (A/M/P), joint (C/F/T))
-    motor_names = [
-        "RPC", "RPF", "RPT",
-        "RMC", "RMF", "RMT",
-        "RAC", "RAF", "RAT",
-        "LPC", "LPF", "LPT",
-        "LMC", "LMF", "LMT",
-        "LAC", "LAF", "LAT"
-    ]
-    motors = [robot.getDevice(name) for name in motor_names]
+# ─────────────── IMU (+ optional gyro / accelerometer) ───
+imu  = robot.getDevice("inertial unit")
+gyro = robot.getDevice("gyro")
+acc  = robot.getDevice("accelerometer")
+for s in (imu, gyro, acc):
+    if s: s.enable(TIMESTEP)
 
-    # Retrieve joint position sensors (assumed names: "ps_<motor_name>")
-    joint_sensor_names = ["ps_" + name for name in motor_names]
-    joint_sensors = [robot.getDevice(name) for name in joint_sensor_names]
-    for sensor in joint_sensors:
-        if sensor is not None:
-            sensor.enable(timestep)
+# ─────────────── foot contact sensors ──────────────────────
+FOOT_NAMES = ["LAS","LMS","LPS","RAS","RMS","RPS"]
+feet = []
+for name in FOOT_NAMES:
+    ts = robot.getDevice(name)
+    if ts: ts.enable(TIMESTEP)
+    else:  print(f"[warn] foot sensor {name} not found")
+    feet.append(ts)
 
-    # IMU device (ensure the correct name: update if necessary)
-    imu = robot.getDevice("integral unit")
-    if imu is not None:
-        imu.enable(timestep)
+# ─────────────── centre of mass (Supervisor only) ─────────
+if is_super:
+    robot_node = robot.getSelf()
+else:
+    robot_node = None
 
-    # Foot contact sensors (assumed names)
-    foot_contact_names = ["foot_contact1", "foot_contact2", "foot_contact3",
-                          "foot_contact4", "foot_contact5", "foot_contact6"]
-    foot_contacts = [robot.getDevice(name) for name in foot_contact_names]
-    for sensor in foot_contacts:
-        if sensor is not None:
-            sensor.enable(timestep)
+# ─────────────── hard‑coded tripod gait parameters ────────
+aC,aF,aT = 0.25, 0.20,  0.05           # amplitudes
+dC,dF,dT = 0.60, 0.80, -2.40           # offsets
+pC,pF,pT = 0.00, 2.00,  2.50           # phases
+A = [ aC, aF,-aT,-aC,-aF, aT,  aC, aF,-aT,  aC,-aF, aT, -aC, aF,-aT,  aC,-aF, aT]
+D = [-dC, dF, dT, 0.0, dF, dT,  dC, dF, dT,  dC, dF, dT, 0.0, dF, dT, -dC, dF, dT]
+P = [ pC, pF, pT, pC, pF, pT,  pC, pF, pT,  pC, pF, pT, pC, pF, pT,  pC, pF, pT]
 
-    # If using Supervisor mode for COM, get the COM via the "translation" field:
-    if is_supervisor:
-        robot_node = robot.getSelf()
-        # Typically, the robot's position is stored in "translation"
-        com_field = robot_node.getField("translation")
+# ─────────────── CSV header ───────────────────────────────
+header = (
+    ["time"] +
+    MOTOR_NAMES +                             # commanded positions
+    ["imu_r","imu_p","imu_y"] +
+    ["gyro_x","gyro_y","gyro_z"] +
+    ["acc_x","acc_y","acc_z"] +
+    [f"enc_{n}" for n in MOTOR_NAMES] +
+    FOOT_NAMES +
+    ["com_x","com_y","com_z"]
+)
 
-    # Gait parameters
-    f = 0.5  # frequency [Hz]
+with open(CSV_FILE, "w", newline="") as fp:
+    writer = csv.writer(fp)
+    writer.writerow(header)
 
-    # Amplitudes [rad]
-    aC = 0.25  # base motors
-    aF = 0.2   # shoulder motors
-    aT = 0.05  # knee motors
-    a = [aC, aF, -aT, -aC, -aF, aT, aC, aF, -aT, aC, -aF, aT, -aC, aF, -aT, aC, -aF, aT]
+    # ───────────────────── main loop ──────────────────────
+    while robot.step(TIMESTEP) != -1:
+        t = robot.getTime()
 
-    # Phases [s]
-    pC = 0.0
-    pF = 2.0
-    pT = 2.5
-    p = [pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT, pC, pF, pT]
+        # ----- compute & send tripod gait set‑points -----
+        cmd = [A[i]*math.sin(2*math.pi*FREQ_HZ*t + P[i]) + D[i] for i in range(18)]
+        for m,pos in zip(motors, cmd):
+            if m: m.setPosition(pos)
 
-    # Offsets [rad]
-    dC = 0.6
-    dF = 0.8
-    dT = -2.4
-    d = [-dC, dF, dT, 0.0, dF, dT, dC, dF, dT, dC, dF, dT, 0.0, dF, dT, -dC, dF, dT]
+        # ----- sensors -----
+        imu_val  = imu.getRollPitchYaw() if imu  else (None,)*3
+        gyro_val = gyro.getValues()      if gyro else (None,)*3
+        acc_val  = acc.getValues()       if acc  else (None,)*3
 
-    # Open a CSV file to log all sensor data
-    with open("expert_data.csv", mode='w', newline="") as csvfile:
-        csv_writer = csv.writer(csvfile)
-        # Build CSV header:
-        header = ["time"]
-        # Use the actual motor device names for clarity
-        header += motor_names
-        header += ["imu_roll", "imu_pitch", "imu_yaw"]
-        header += ["joint_sensor{}".format(i+1) for i in range(len(joint_sensors))]
-        header += foot_contact_names
-        header += ["com_x", "com_y", "com_z"]
-        csv_writer.writerow(header)
+        enc_val  = [ps.getValue() if ps else None for ps in encoders]
+        foot_val = [ts.getValue() if ts else None for ts in feet]
 
-        # Main simulation loop
-        while robot.step(timestep) != -1:
-            current_time = robot.getTime()
-            row = [current_time]
+        com_val  = (
+            robot_node.getCenterOfMass() if robot_node else (None,)*3
+        )
 
-            # Compute motor positions, command motors, and log positions
-            motor_positions = []
-            for i in range(18):
-                pos = a[i] * math.sin(2.0 * math.pi * f * current_time + p[i]) + d[i]
-                motors[i].setPosition(pos)
-                motor_positions.append(pos)
-            row += motor_positions
+        # ----- write one CSV row -----
+        writer.writerow(
+            [t] + cmd
+            + list(imu_val) + list(gyro_val) + list(acc_val)
+            + enc_val + foot_val + list(com_val)
+        )
 
-            # Read IMU values (roll, pitch, yaw)
-            imu_values = [None, None, None]
-            if imu is not None:
-                imu_values = imu.getRollPitchYaw()
-            row += imu_values
-
-            # Read joint sensor values
-            joint_values = []
-            for sensor in joint_sensors:
-                if sensor is not None:
-                    joint_values.append(sensor.getValue())
-                else:
-                    joint_values.append(None)
-            row += joint_values
-
-            # Read foot contact sensor values
-            foot_values = []
-            for sensor in foot_contacts:
-                if sensor is not None:
-                    foot_values.append(sensor.getValue())
-                else:
-                    foot_values.append(None)
-            row += foot_values
-
-            # Get center of mass approximation (using the robot's translation field)
-            com = [None, None, None]
-            if is_supervisor and com_field is not None:
-                com = com_field.getSFVec3f()
-            row += com
-
-            csv_writer.writerow(row)
-
-if __name__ == "__main__":
-    main()
+print("Finished; data saved to", CSV_FILE)

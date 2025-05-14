@@ -3,6 +3,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import os
 import numpy as np
+import random
 import socket
 import json
 import subprocess
@@ -96,9 +97,10 @@ class HexapodEnv(gym.Env):
         com = obs['com']       # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
         lidar_values = obs['lidar']
+        #lidar_values = [(random.choice(range(0,100))) for _ in range(0,3)]
 
         theta, acc = imu_data[0], imu_data[1]
-        com_height = com[2]
+        #com_height = com[2]
 
         # TODO: needs fine tuning and actual sensor values 
         # Reward depends on task

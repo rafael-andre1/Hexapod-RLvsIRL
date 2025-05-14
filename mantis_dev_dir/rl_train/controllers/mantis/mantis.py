@@ -178,7 +178,10 @@ def main():
 
         # TODO: Can't send via json!!!
         point_cloud = lidar.getPointCloud()
-        lidar_values = [[p.x, p.y, p.z] for p in point_cloud]
+
+        # We only want to see "forward", lidar points to the floor
+        lidar_values = [p.x for p in point_cloud]
+        print(lidar_values)
 
 
         # TODO: Currently random for joint sensors!!!
@@ -197,7 +200,8 @@ def main():
             # center of mass (x,y,z)
             "com": com,
 
-            "lidar": [[p.x, p.y, p.z] for p in point_cloud]
+            "lidar": lidar_values
+
         }
 
         """

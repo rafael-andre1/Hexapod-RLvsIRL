@@ -87,8 +87,10 @@ def main():
     motors, joint_sensors = [], []
     for name in MOTOR_NAMES:
         m = robot.getDevice(name)
-        ps = robot.getDevice("ps_" + name)
-        if name == "RPT":
+
+        # Only elbows have sensors (manually added)
+        if "T" in name:
+            ps = robot.getDevice("ps_" + name)
             if ps:
                 ps.enable(timestep)
                 joint_sensors.append(ps)
@@ -169,23 +171,25 @@ def main():
             continue
 
         for i in range(18):
-            #motors[i].setPosition(action[i])
-            pass
+            motors[i].setPosition(action[i])
+            #pass
 
         # ---------- Sensor Readings ---------- #
 
         # IMU
-        roll, p, y = imu.getRollPitchYaw()
+        roll, pitch, yaw = imu.getRollPitchYaw()
         # ax, ay, az = acc.getValues() if acc else (0.0, 0.0, 0.0)
         #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
-        #imu_values = [roll, acc_norm]
+        imu_values = [roll, pitch, yaw]
 
-        # Read joint sensor position values
+        # Read joint sensor angle values
         joint_values = []
+        #print("---------------------------------------")
         for sensor in joint_sensors:
-            print("Positional sensor value: ", math.degrees(sensor.getValue()))
+            #print("Positional sensor value: ", math.degrees(sensor.getValue()))
             if sensor: joint_values.append(sensor.getValue())
             else: joint_values.append(None)
+        #print("---------------------------------------")
 
         # Read foot contact sensor values
         foot_values = [ts.getValue() for ts in feet]
@@ -193,20 +197,19 @@ def main():
         # Get center of mass approximation (using the robot's translation field)
         com = robot_node.getCenterOfMass()
 
-        # TODO: Can't send via json!!!
+        # Reads point cloud values
         point_cloud = lidar.getPointCloud()
 
         # We only want to see "forward": lidar points to the floor
         lidar_values = [p.x for p in point_cloud]
 
-        # TODO: Currently random for joint sensors!!!
+        # TODO: Currently random for IMU!!!
         observation = {
             # joint angles
             "joint_sensors": joint_values,
 
             # roll and acceleration
-            # "imu": imu_values,
-            "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
+            "imu": imu_values,
 
             # foot contact sensor values
             "foot_contacts": foot_values,
@@ -220,7 +223,7 @@ def main():
 
         """
         observation = {
-            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
+            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(6)],
             "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
             "foot_contacts": [random.randint(0, 1) for _ in range(6)],
             "com": [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]

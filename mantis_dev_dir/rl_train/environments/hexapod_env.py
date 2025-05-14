@@ -39,7 +39,7 @@ class HexapodEnv(gym.Env):
           - Center of mass (3D vector): 3
         
         """
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(29,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(18,), dtype=np.float32)
 
         # Start Webots simulation
         # webots_cmd = os.environ.get("WEBOTS_CMD", "webots")
@@ -75,7 +75,7 @@ class HexapodEnv(gym.Env):
     def get_initial_observation(self):
         # TODO: Currently not used, should be straightforward to define
         # as the starting point should be easy to generate
-        return np.zeros(29)  
+        return np.zeros(18)
     
     def check_done(self, com, step_count, max_steps=500):
         # TODO: optimize and add conditions:
@@ -97,9 +97,11 @@ class HexapodEnv(gym.Env):
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
         lidar_values_original = obs['lidar']
         joint_sensors = obs['joint_sensors']
+        imu_values = obs['imu']
+        roll, pitch, yaw = imu_values[0], imu_values[1], imu_values[2]
 
         # Sanitizing values to avoid inf when robot flips over
-        lidar_values = [v for v in lidar_values_original if math.isfinite(v)]
+        lidar_values = [v if math.isfinite(v) else 999 for v in lidar_values_original]
 
         theta, acc = imu_data[0], imu_data[1]
         com_height = com[2]
@@ -119,8 +121,11 @@ class HexapodEnv(gym.Env):
                 # as multiplier for reward
 
                 reward += 1 * (0.2 * self.stable_counter)
-            else:
+            elif diff >5:
                 reward -= 0.5
+                self.stable_counter = 0
+            else:
+                reward -= 4
                 self.stable_counter = 0
 
             # For every foot that's not touching the ground, we take points
@@ -152,6 +157,18 @@ class HexapodEnv(gym.Env):
                     reward += 1 * 3
                 else:
                     reward -= 0.5 * 3
+
+            # Tilt control helps avoid flipping over
+            threshold = 0.1  # radians (~5.7 degrees)
+            if abs(roll) < 0.1 and abs(pitch) < 0.1:
+                reward += 2  # Great stability
+            elif abs(roll) < 0.3 and abs(pitch) < 0.3:
+                reward += 1  # Good stability
+            elif abs(roll) < 0.6 and abs(pitch) < 0.6:
+                reward -= 1  # Slightly unstable
+
+            # Rolling over or being very tilted is highly penalized
+            else: reward-= 3
 
 
         elif self.task == 'walk':
@@ -191,7 +208,7 @@ class HexapodEnv(gym.Env):
 
     def step(self, action):
         # Sends actions into Webots
-        print("Action sent by PPO: ", action)
+        #print("Action sent by PPO: ", action)
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
 
         # Pulls readings after actions
@@ -247,7 +264,7 @@ class HexapodEnv(gym.Env):
             break
 
         # TODO: how do I pull original positions for every reset?
-        initial_obs = np.zeros(29, dtype=np.float32)
+        initial_obs = np.zeros(18, dtype=np.float32)
         return initial_obs, {}
     
 

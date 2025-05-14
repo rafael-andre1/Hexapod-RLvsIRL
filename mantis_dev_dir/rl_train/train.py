@@ -33,16 +33,18 @@ env = HexapodEnv()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
+
+"""
 print("############################")
 print("#######   WARNING    #######")
 print("############################")
 print("ACTIONS CURRENTLY DISABLE FOR INITIAL OBS READING")
-
+"""
 
 # Model choice
 model = PPO("MlpPolicy", env, verbose=1, device=device)
 
 # Model training
-model.learn(total_timesteps=10000, callback=TqdmCallback())
+model.learn(total_timesteps=100000, callback=TqdmCallback())
 model.save("hexapod_ppo_model")
 env.close()

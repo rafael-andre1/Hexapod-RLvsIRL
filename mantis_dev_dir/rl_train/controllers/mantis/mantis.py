@@ -68,17 +68,32 @@ def main():
 
 
     # --------------- Motor and Joint Sensor Initialization --------------- #
+
+    # Ending in C: controls leg forward-backward movements
+    # Ending in F: controls body hinge (shoulder?) up-down
+    # Ending in T: controls arm hinge (elbow?) up-down
+
+    # Anterior -> "face" of the robot
+    # Posterior -> back of the robot
+
     MOTOR_NAMES = [
-        "RPC", "RPF", "RPT", "RMC", "RMF", "RMT", "RAC", "RAF", "RAT",
-        "LPC", "LPF", "LPT", "LMC", "LMF", "LMT", "LAC", "LAF", "LAT"
+        "RPC", "RPF", "RPT",  # Right Posterior Controls
+        "RMC", "RMF", "RMT",  # Right Middle Controls
+        "RAC", "RAF", "RAT",  # Right Anterior Controls
+        "LPC", "LPF", "LPT",  # Left Posterior Controls
+        "LMC", "LMF", "LMT",  # Left Middle Controls
+        "LAC", "LAF", "LAT"   # Left Anterior Controls
     ]
     motors, joint_sensors = [], []
     for name in MOTOR_NAMES:
         m = robot.getDevice(name)
-        ps = m.getPositionSensor()
-        if ps:  ps.enable(timestep)
+        ps = robot.getDevice("ps_" + name)
+        if name == "RPT":
+            if ps:
+                ps.enable(timestep)
+                joint_sensors.append(ps)
         motors.append(m)
-        joint_sensors.append(ps)
+
 
     # --------------- IMU  --------------- #
     imu = robot.getDevice("inertial unit")
@@ -141,9 +156,9 @@ def main():
                     """
 
                 sock.sendall((json.dumps({"status": "reset_complete"}) + "\n").encode("utf-8"))
-                continue  
+                continue
 
-        # ---------- Apply Action ---------- #    
+        # ---------- Apply Action ---------- #
 
             action = message
 
@@ -154,12 +169,13 @@ def main():
             continue
 
         for i in range(18):
-            motors[i].setPosition(action[i])
+            #motors[i].setPosition(action[i])
+            pass
 
         # ---------- Sensor Readings ---------- #
 
         # IMU
-        roll, p, y = imu.getRollPitchYaw() if imu else (0.0, 0.0, 0.0)
+        roll, p, y = imu.getRollPitchYaw()
         # ax, ay, az = acc.getValues() if acc else (0.0, 0.0, 0.0)
         #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
         #imu_values = [roll, acc_norm]
@@ -167,7 +183,8 @@ def main():
         # Read joint sensor position values
         joint_values = []
         for sensor in joint_sensors:
-            if sensor is not None: joint_values.append(sensor.getValue())
+            print("Positional sensor value: ", math.degrees(sensor.getValue()))
+            if sensor: joint_values.append(sensor.getValue())
             else: joint_values.append(None)
 
         # Read foot contact sensor values
@@ -179,16 +196,13 @@ def main():
         # TODO: Can't send via json!!!
         point_cloud = lidar.getPointCloud()
 
-        # We only want to see "forward", lidar points to the floor
+        # We only want to see "forward": lidar points to the floor
         lidar_values = [p.x for p in point_cloud]
-        print(lidar_values)
-
 
         # TODO: Currently random for joint sensors!!!
         observation = {
-            # joint positions
-            #"joint_sensors": joint_values,
-            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(18)],
+            # joint angles
+            "joint_sensors": joint_values,
 
             # roll and acceleration
             # "imu": imu_values,

@@ -5,6 +5,7 @@ import os
 import numpy as np
 import random
 import socket
+import math
 import json
 import subprocess
 import time
@@ -69,8 +70,6 @@ class HexapodEnv(gym.Env):
         self.prev_com = None
         self.prev_pos = 0
         self.total_steps = 0
-
-        # TODO: add stability counter functionality
         self.stable_counter = 0
 
     def get_initial_observation(self):
@@ -83,8 +82,8 @@ class HexapodEnv(gym.Env):
         # - time step limit is reached
         # - body too low
 
-        # TODO: should these conditions stop episode when its really bad
-        # or when it has achieved what we are looking for? both?
+        # TODO: should these conditions stop episode when its really bad or...
+        # TODO: when it has achieved what we are looking for? both?
         # If good -> nothing else to learn
         # If terrible for a long time -> fresh start
         if (step_count >= max_steps):
@@ -96,19 +95,64 @@ class HexapodEnv(gym.Env):
         imu_data = obs['imu']  # [theta, acc]
         com = obs['com']       # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
-        lidar_values = obs['lidar']
-        #lidar_values = [(random.choice(range(0,100))) for _ in range(0,3)]
+        lidar_values_original = obs['lidar']
+        joint_sensors = obs['joint_sensors']
+
+        # Sanitizing values to avoid inf when robot flips over
+        lidar_values = [v for v in lidar_values_original if math.isfinite(v)]
 
         theta, acc = imu_data[0], imu_data[1]
-        #com_height = com[2]
+        com_height = com[2]
 
-        # TODO: needs fine tuning and actual sensor values 
-        # Reward depends on task
+        # TODO: needs fine tuning and actual motor position sensor values
         if self.task == 'stand_up':
-            h_base = 62
-            print("Robot lidar height: ", max(lidar_values))
-            vcom = abs(max(lidar_values) - h_base) / h_base
-            reward = 1 - vcom
+            reward = 0 # starts at zero, based on conditions changes value
+
+            # Acceptable height + stability at height
+            h_base = 4.5 # empirically defined as reasonable height
+            diff = abs(max(lidar_values) - h_base)
+            if diff <= 0.4:
+                self.stable_counter += 1
+                # The more stable, the higher the reward
+                # In order to avoid explosive increase,
+                # we consider 20% of total steps being stable
+                # as multiplier for reward
+
+                reward += 1 * (0.2 * self.stable_counter)
+            else:
+                reward -= 0.5
+                self.stable_counter = 0
+
+            # For every foot that's not touching the ground, we take points
+            for v in foot_contacts:
+                if v == 0: reward -= 0.5
+                elif v == 1: reward += 1
+                else: print("NON-READABLE FOOT SENSOR VALUE! ", v)
+
+            """
+             Following the mantis tutorial, after reading the .wbt
+              file values for the hinge position:
+               - if the "elbow" hinges were to be perfectly bent/balanced, 
+               its angle would be [ ~ -2.4121293759260714 rad -> ~ -138.2 deg ]
+            
+             Therefore, the lower this negative number is, the tighter the 
+              robot closes its arm.
+            
+             In order to, again, respect a threshold as it was done in
+              the height check.
+            """
+
+            # Acceptable arm position (hinge safety)
+            base_angle = -138.2
+            for joint_angle in joint_sensors:
+                diff = abs(joint_angle - base_angle)
+                if diff <= 10:
+                    # In order to enforce stability while
+                    # standing, this reward is much more important (3x)
+                    reward += 1 * 3
+                else:
+                    reward -= 0.5 * 3
+
 
         elif self.task == 'walk':
             # === BASE HEIGHT ===
@@ -143,11 +187,11 @@ class HexapodEnv(gym.Env):
             # done = False
 
         self.prev_com = com
-        print(reward)
-        return reward 
+        return reward
 
     def step(self, action):
         # Sends actions into Webots
+        print("Action sent by PPO: ", action)
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
 
         # Pulls readings after actions
@@ -182,7 +226,7 @@ class HexapodEnv(gym.Env):
         self.total_steps = 0
         self.prev_com = None
 
-        # TODO: how do I only reset position every episode instead of iteration
+        # TODO: how do I only reset position every episode instead of iteration? Solved?
         # efficiently? Currently lazy and maybe incorrect implementation in the controller.
         self.conn.sendall((json.dumps({'command': 'reset'}) + "\n").encode('utf-8'))
 

@@ -10,6 +10,8 @@ import json
 import subprocess
 import time
 
+OBS_SPACE_SIZE = 18
+
 
 def is_port_in_use(port, host="127.0.0.1"):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -39,7 +41,7 @@ class HexapodEnv(gym.Env):
           - Center of mass (3D vector): 3
         
         """
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(18,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(OBS_SPACE_SIZE,), dtype=np.float32)
 
         # Start Webots simulation
         # webots_cmd = os.environ.get("WEBOTS_CMD", "webots")
@@ -75,7 +77,7 @@ class HexapodEnv(gym.Env):
     def get_initial_observation(self):
         # TODO: Currently not used, should be straightforward to define
         # as the starting point should be easy to generate
-        return np.zeros(18)
+        return np.zeros(OBS_SPACE_SIZE)
     
     def check_done(self, com, step_count, max_steps=500):
         # TODO: optimize and add conditions:
@@ -86,7 +88,7 @@ class HexapodEnv(gym.Env):
         # TODO: when it has achieved what we are looking for? both?
         # If good -> nothing else to learn
         # If terrible for a long time -> fresh start
-        if (step_count >= max_steps):
+        if (step_count >= max_steps) or (self.stable_counter >= 10):
             return True
         return False
 
@@ -96,7 +98,8 @@ class HexapodEnv(gym.Env):
         com = obs['com']       # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
         lidar_values_original = obs['lidar']
-        joint_sensors = obs['joint_sensors']
+        #joint_sensors = obs['joint_sensors']
+        hinge_robot_hdiff = obs["hinge_robot_hdiff"]
         imu_values = obs['imu']
         roll, pitch, yaw = imu_values[0], imu_values[1], imu_values[2]
 
@@ -145,9 +148,11 @@ class HexapodEnv(gym.Env):
             
              In order to, again, respect a threshold as it was done in
               the height check.
-            """
 
-            # Acceptable arm position (hinge safety)
+             However, the correct sensor placement is being blocked by internal 
+             Webots processes. This makes it impossible to measure.
+            
+            # Acceptable arm position (hinge safety and correct execution of task)
             base_angle = -138.2
             for joint_angle in joint_sensors:
                 diff = abs(joint_angle - base_angle)
@@ -157,6 +162,7 @@ class HexapodEnv(gym.Env):
                     reward += 1 * 3
                 else:
                     reward -= 0.5 * 3
+            """
 
             # Tilt control helps avoid flipping over
             threshold = 0.1  # radians (~5.7 degrees)
@@ -264,7 +270,7 @@ class HexapodEnv(gym.Env):
             break
 
         # TODO: how do I pull original positions for every reset?
-        initial_obs = np.zeros(18, dtype=np.float32)
+        initial_obs = np.zeros(OBS_SPACE_SIZE, dtype=np.float32)
         return initial_obs, {}
     
 

@@ -121,7 +121,23 @@ def main():
     # --------------- Center Of Mass --------------- #
     if is_supervisor:
         robot_node = robot.getSelf()
-    else: robot_node = None
+
+
+    # --------------- Robot and Elbows Frames --------------- #
+
+    elbow_hinges_frames = []
+
+    # Get robot node and translation field
+    robot_translation_field = robot_node.getField("translation")
+
+    # Get a specific hinge/joint node
+    elbow_hinges = ["RPT", "RMT", "RAT", "LPT", "LMT", "LAT" ]
+    for h in elbow_hinges:
+        elbow_joint_node = robot.getFromDef(h+"_HINGE_JOINT")
+        # print(h, ":", elbow_joint_node)
+        if elbow_joint_node == None: continue
+        elbow_translation_field = elbow_joint_node.getField("translation")
+        elbow_hinges_frames.append(elbow_translation_field)
 
                                 # ---------------------------------------------------- #
                                 # --------------- Main Simulation Loop --------------- #
@@ -171,10 +187,13 @@ def main():
             continue
 
         for i in range(18):
-            motors[i].setPosition(action[i])
-            #pass
+            # Normalizing motor input values (for safety and stability)
+            min_pos, max_pos = motors[i].getMinPosition(), motors[i].getMaxPosition()
+            pos = 0.5 * (action[i] + 1) * (max_pos - min_pos) + min_pos
+            motors[i].setPosition(pos)
 
-        # ---------- Sensor Readings ---------- #
+
+                                            # ---------- Sensor Readings ---------- #
 
         # IMU
         roll, pitch, yaw = imu.getRollPitchYaw()
@@ -183,6 +202,7 @@ def main():
         imu_values = [roll, pitch, yaw]
 
         # Read joint sensor angle values
+        """
         joint_values = []
         #print("---------------------------------------")
         for sensor in joint_sensors:
@@ -190,6 +210,21 @@ def main():
             if sensor: joint_values.append(sensor.getValue())
             else: joint_values.append(None)
         #print("---------------------------------------")
+        """
+
+        # Difference between joint and robot heights
+        joint_robot_hdiff = []
+        robot_position = robot_translation_field.getSFVec3f()
+        robot_height = robot_position[2]
+
+        for h in elbow_hinges_frames:
+            print(h)
+            hinge_position = h.getSFVec3f()
+            hinge_height = hinge_position[2]
+            hinge_robot_diff = hinge_height - robot_height
+            joint_robot_hdiff.append(hinge_robot_diff)
+
+        
 
         # Read foot contact sensor values
         foot_values = [ts.getValue() for ts in feet]
@@ -203,21 +238,23 @@ def main():
         # We only want to see "forward": lidar points to the floor
         lidar_values = [p.x for p in point_cloud]
 
-        # TODO: Currently random for IMU!!!
+
+        # Collection of all relevant sensor/supervisor values
         observation = {
             # joint angles
-            "joint_sensors": joint_values,
+            "joint_robot_hdiff": joint_robot_hdiff,
 
-            # roll and acceleration
-            "imu": imu_values,
+            # roll, pitch and yaw
+            "imu": imu_values, # 3 values
 
             # foot contact sensor values
-            "foot_contacts": foot_values,
+            "foot_contacts": foot_values, # 6 values
 
             # center of mass (x,y,z)
-            "com": com,
+            "com": com, # 3 values
 
-            "lidar": lidar_values
+            # robot distance to the ground
+            "lidar": lidar_values # 3 values
 
         }
 

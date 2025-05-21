@@ -98,8 +98,8 @@ class HexapodEnv(gym.Env):
         com = obs['com']       # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
         lidar_values_original = obs['lidar']
-        #joint_sensors = obs['joint_sensors']
-        hinge_robot_hdiff = obs["hinge_robot_hdiff"]
+        joint_sensors = obs['joint_sensors']
+        #hinge_robot_hdiff = obs["hinge_robot_hdiff"]
         imu_values = obs['imu']
         roll, pitch, yaw = imu_values[0], imu_values[1], imu_values[2]
 
@@ -151,6 +151,7 @@ class HexapodEnv(gym.Env):
 
              However, the correct sensor placement is being blocked by internal 
              Webots processes. This makes it impossible to measure.
+            """
             
             # Acceptable arm position (hinge safety and correct execution of task)
             base_angle = -138.2
@@ -162,7 +163,7 @@ class HexapodEnv(gym.Env):
                     reward += 1 * 3
                 else:
                     reward -= 0.5 * 3
-            """
+
 
             # Tilt control helps avoid flipping over
             threshold = 0.1  # radians (~5.7 degrees)

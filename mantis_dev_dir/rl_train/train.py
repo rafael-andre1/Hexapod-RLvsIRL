@@ -45,6 +45,6 @@ print("ACTIONS CURRENTLY DISABLE FOR INITIAL OBS READING")
 model = PPO("MlpPolicy", env, verbose=1, device=device)
 
 # Model training
-model.learn(total_timesteps=100000, callback=TqdmCallback())
+model.learn(total_timesteps=250000, callback=TqdmCallback())
 model.save("hexapod_ppo_model")
 env.close()

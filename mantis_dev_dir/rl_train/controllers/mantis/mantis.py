@@ -188,9 +188,12 @@ def main():
 
         for i in range(18):
             # Normalizing motor input values (for safety and stability)
-            min_pos, max_pos = motors[i].getMinPosition(), motors[i].getMaxPosition()
-            pos = 0.5 * (action[i] + 1) * (max_pos - min_pos) + min_pos
-            motors[i].setPosition(pos)
+            #min_pos, max_pos = motors[i].getMinPosition(), motors[i].getMaxPosition()
+            #pos = 0.5 * (action[i] + 1) * (max_pos - min_pos) + min_pos
+            pos=action[i]
+            #motors[i].setPosition(pos)
+            motors[i].setPosition(math.inf);
+            motors[i].setVelocity(pos)
 
 
                                             # ---------- Sensor Readings ---------- #
@@ -202,7 +205,7 @@ def main():
         imu_values = [roll, pitch, yaw]
 
         # Read joint sensor angle values
-        """
+
         joint_values = []
         #print("---------------------------------------")
         for sensor in joint_sensors:
@@ -210,20 +213,21 @@ def main():
             if sensor: joint_values.append(sensor.getValue())
             else: joint_values.append(None)
         #print("---------------------------------------")
-        """
+
 
         # Difference between joint and robot heights
         joint_robot_hdiff = []
         robot_position = robot_translation_field.getSFVec3f()
         robot_height = robot_position[2]
 
+        """
         for h in elbow_hinges_frames:
             print(h)
             hinge_position = h.getSFVec3f()
             hinge_height = hinge_position[2]
             hinge_robot_diff = hinge_height - robot_height
             joint_robot_hdiff.append(hinge_robot_diff)
-
+        """
         
 
         # Read foot contact sensor values
@@ -242,7 +246,8 @@ def main():
         # Collection of all relevant sensor/supervisor values
         observation = {
             # joint angles
-            "joint_robot_hdiff": joint_robot_hdiff,
+            #"joint_robot_hdiff": joint_robot_hdiff,
+            "joint_sensors" : joint_values,
 
             # roll, pitch and yaw
             "imu": imu_values, # 3 values

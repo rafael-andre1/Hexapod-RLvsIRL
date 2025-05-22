@@ -41,7 +41,7 @@ class HexapodEnv(gym.Env):
           - Center of mass (3D vector): 3
         
         """
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(OBS_SPACE_SIZE,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(OBS_SPACE_SIZE,), dtype=np.float32)
 
         # Start Webots simulation
         # webots_cmd = os.environ.get("WEBOTS_CMD", "webots")

@@ -10,7 +10,7 @@ import json
 import subprocess
 import time
 
-OBS_SPACE_SIZE = 18
+OBS_SPACE_SIZE = 30
 
 
 def is_port_in_use(port, host="127.0.0.1"):
@@ -154,15 +154,25 @@ class HexapodEnv(gym.Env):
             """
             
             # Acceptable arm position (hinge safety and correct execution of task)
-            base_angle = -138.2
-            for joint_angle in joint_sensors:
-                diff = abs(joint_angle - base_angle)
-                if diff <= 10:
-                    # In order to enforce stability while
-                    # standing, this reward is much more important (3x)
-                    reward += 1 * 3
-                else:
-                    reward -= 0.5 * 3
+            aC, aF, aT = 0.25, 0.20, 0.05  # perfect value amplitudes
+            dC, dF, dT = 0.60, 0.80, -2.40  # offsets (centers)
+            minC, maxC = dC - aC, dC + aC
+            minF, maxF = dF - aF, dF + aF
+            minT, maxT = dT - aT, dT + aT
+
+            for i in range(18):
+                if i < 6:
+                    if minC <= joint_sensors[i] <= maxC: reward += 1
+                    else: reward -= 1
+
+                elif i < 12:
+                    if minF <= joint_sensors[i] <= maxF: reward += 1
+                    else: reward -= 1
+
+                elif i < 18:
+                    if minT <= joint_sensors[i] <= maxT: reward += 1
+                    else: reward -= 1
+
 
 
             # Tilt control helps avoid flipping over
@@ -217,6 +227,7 @@ class HexapodEnv(gym.Env):
         # Sends actions into Webots
         #print("Action sent by PPO: ", action)
         self.conn.sendall(json.dumps(action.tolist()).encode('utf-8'))
+        #self.conn.sendall(json.dumps((np.zeros(30)).tolist()).encode('utf-8'))
 
         # Pulls readings after actions
         data = self.conn.recv(4096)
@@ -228,8 +239,9 @@ class HexapodEnv(gym.Env):
             dtype=np.float32
         )
 
+
+        #print("Joint sensors:", len(obs['joint_sensors']))
         """
-        print("Joint sensors:", obs['joint_sensors'])
         print("IMU:", obs['imu'])
         print("Foot contacts:", obs['foot_contacts'])
         print("Center of mass:", obs['com'])

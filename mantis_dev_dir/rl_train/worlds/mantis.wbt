@@ -23,8 +23,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation 0.03473058943548195 -0.023588253304196855 0.9991183015356695 3.8529579646061984
-  position 112.19694244275163 180.1900700840546 62.2977102677285
+  orientation -0.16013687878348923 -0.19516064646103667 0.9676096848039464 4.537076277874622
+  position 103.76817024998333 184.00552378733704 67.35400018035153
   follow "Mantis"
 }
 TexturedBackground {
@@ -44,8 +44,8 @@ UnevenTerrain {
   perlinNOctaves 8
 }
 Robot {
-  translation 102.39450370997677 170.9996572462009 62.00465371239045
-  rotation -0.14117952484234297 -0.008584756211485117 0.989946788330605 0.701225569413641
+  translation 102.31430611250981 170.85202977788438 61.958983048796256
+  rotation -0.06570726869984972 0.057412472548617546 0.9961859077681535 0.7413351088811737
   children [
     Lidar {
       translation 0.03 0 -0.06
@@ -129,7 +129,7 @@ Robot {
     }
     DEF RPC_HINGE_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.022178406568685166
+        position 5.764137322790408e-06
         axis 0 0 1
         anchor -1.2 -0.5 0
       }
@@ -141,7 +141,7 @@ Robot {
       ]
       endPoint Solid {
         translation -1.2 -0.5 0
-        rotation 0.5687520564106389 -0.5815975058313348 -0.5816059142920059 2.1073465398038485
+        rotation 0.5772904666450333 -0.5773759261655314 -0.5773844100815804 2.094490746423044
         children [
           DEF COXA_T Pose {
             translation 0.110802 0.12843 0.849049
@@ -199,7 +199,7 @@ Robot {
           }
           DEF RPF_HINGE_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.010488386889164314
+              position -8.901952694673199e-05
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -211,7 +211,7 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.010092386892752542
+              rotation 0 0 -0.9999999999999999 0.0004850195237016391
               children [
                 DEF FEMUR_T Pose {
                   translation -0.001031 0.014263 -0.123609
@@ -270,7 +270,7 @@ Robot {
                 }
                 DEF RPT_HINGE_JOINT HingeJoint {
                   jointParameters HingeJointParameters {
-                    position -0.1880505340095529
+                    position -3.0316548935461545e-05
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -285,7 +285,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 -0.9999999999999999 0.18805053400955282
+                    rotation 0 0 -1 3.0316550693840917e-05
                     children [
                       DEF TIBIA_T Pose {
                         translation 0 -6e-06 -0.008
@@ -390,8 +390,8 @@ Robot {
                         ]
                       }
                       DEF FOOT_CONTACT TouchSensor {
-                        translation 1.6009056049151695 0.0001350477817254614 -0.0002615284045930366
-                        rotation -0.039284030109474295 0.7476844307165216 0.6628912105635953 4.30584877788135e-05
+                        translation 1.6009055401924783 0.0001334729751363284 -0.00026161044345940354
+                        rotation -0.039284587459140825 0.7476834076271046 0.6628923314892745 4.3058415475852934e-05
                         children [
                           DEF FOOT_C Shape {
                             appearance PBRAppearance {
@@ -409,8 +409,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity -1.9711952978441452 -5.082308047694188 1.8502623036852066
-                        angularVelocity -2.807431486377075 -2.4293071974614064 -1.3130103826112118
+                        linearVelocity 0.001090376353178435 -0.0006223398946404019 -0.00025566095058801255
+                        angularVelocity 0.00011472043365639389 -6.622144196194691e-05 0.0006786203604320706
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -445,8 +445,8 @@ Robot {
                       density -1
                       mass 2
                     }
-                    linearVelocity -1.339923199933597 -4.121398016044505 -1.278093410740659
-                    angularVelocity -2.8074312438147153 -2.42930744878067 -1.3130150011689588
+                    linearVelocity 0.000665650237584447 -0.0010085850069213103 -0.0002215519478748718
+                    angularVelocity 0.00011472043357943593 -6.622144189933703e-05 0.0006786203604239258
                   }
                 }
                 LED {
@@ -482,8 +482,8 @@ Robot {
                 density -1
                 mass 2
               }
-              linearVelocity -0.18474138258192574 -2.170411597302564 -0.45744095361077797
-              angularVelocity 3.78598935024716 2.9424712531048023 -1.5485849007046917
+              linearVelocity -8.330037047807108e-05 -0.001689256233428823 -0.00016136446361279867
+              angularVelocity 0.00011471977760383244 -6.622201517505552e-05 0.0006786209966106844
             }
           }
           LED {
@@ -512,13 +512,13 @@ Robot {
           density -1
           mass 1
         }
-        linearVelocity 0.5861652145647407 -0.9642550017132766 2.606775131294886
-        angularVelocity -2.6749262747540343 -2.323993241612505 -1.3356782546571897
+        linearVelocity -0.00053266209882819 -0.0020976506004381436 -0.00012525331396647142
+        angularVelocity 0.0001147183930594656 -6.622320501587729e-05 0.000678622855252399
       }
     }
     DEF RMC_HINGE_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.18179582806085323
+        position -0.00020563221174663138
         axis 0 0 1
         anchor 0 -0.7 0
       }
@@ -530,14 +530,14 @@ Robot {
       ]
       endPoint Solid {
         translation 0 -0.7 0
-        rotation 0.5074310975517339 -0.609306939136526 -0.6093100484626202 2.202456837122065
+        rotation 0.5772108686544669 -0.5774179581699453 -0.5774219554970237 2.094617110235557
         children [
           USE COXA_T
           USE COXA_AXIS_S
           USE RAC_Shape
           DEF RMF_HINGE_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.031981189971465596
+              position 0.0029285724601292307
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -549,12 +549,12 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.03158518997731022
+              rotation 0 0 0.9999999999999999 0.002532572466001234
               children [
                 USE FEMUR_T
                 HingeJoint {
                   jointParameters HingeJointParameters {
-                    position -0.24993250360239205
+                    position 0.0015242449578568272
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -569,7 +569,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 -1 0.2499525035144003
+                    rotation 0 0 1 0.0015042450680914034
                     children [
                       USE TIBIA_T
                       DEF ANKLE LED {
@@ -607,8 +607,8 @@ Robot {
                         ]
                       }
                       TouchSensor {
-                        translation 1.5996093327456293 0.0005094960201930121 0.0001783678812330436
-                        rotation -0.07597114214579191 0.2787324973470242 -0.957359170052575 -0.00011952578940288561
+                        translation 1.5996038084407758 0.0006653209341891397 0.00018815806399175017
+                        rotation 0.06200731089193533 -0.28111031969576367 0.9576701319120777 0.00011852262942162519
                         children [
                           USE FOOT_C
                         ]
@@ -618,8 +618,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity 0.03570191872880946 -0.27075302866363593 0.014427007508682088
-                        angularVelocity 1.8604354257987301 0.3106706679138835 -0.10575001883290369
+                        linearVelocity 0.0007651979066645254 0.00018644002842158614 -3.7872251811545966e-05
+                        angularVelocity 9.423608313981675e-05 -8.428585179724268e-05 0.0007268342882197726
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -642,8 +642,8 @@ Robot {
                     ]
                     boundingObject USE RAT_Shape
                     physics USE TIBIA_P
-                    linearVelocity 0.16233605987473976 -0.44156684750650504 1.5042728094928832
-                    angularVelocity 1.8555703464130715 0.30878065706034646 -0.10578376913440446
+                    linearVelocity 0.00031025277768943494 -0.0002277036952706624 -2.7764790915459123e-05
+                    angularVelocity 9.407651915508527e-05 -8.408803901396351e-05 0.0007268258413930088
                   }
                 }
                 LED {
@@ -667,8 +667,8 @@ Robot {
               ]
               boundingObject USE RAF_Shape
               physics USE FEMUR_P
-              linearVelocity 0.38865240123928413 -0.5078907292651165 3.357980863092553
-              angularVelocity 0.9588535290551765 -0.20614607446207023 -0.10392365908216272
+              linearVelocity -0.0004903671441183736 -0.0009565554815101867 -2.5770457829743245e-06
+              angularVelocity 0.00010062543656255564 -7.792234874662461e-05 0.0007235501946566083
             }
           }
           LED {
@@ -694,13 +694,13 @@ Robot {
         name "RMC"
         boundingObject USE RAC_Shape
         physics USE COXA_P
-        linearVelocity 0.5414024316388462 -0.4753322089190213 3.3549254179698393
-        angularVelocity -2.7852578651387274 -2.3098702219216904 -0.06075848623656038
+        linearVelocity -0.0009697591725834799 -0.0013926193958270978 1.885819325599069e-05
+        angularVelocity 0.00011340101114377498 -6.620860755662666e-05 0.0007172158681264289
       }
     }
     DEF RAC_HINGE_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.11462527697611025
+        position -7.472287831721217e-05
         axis 0 0 1
         anchor 1.2 -0.5 0
       }
@@ -712,14 +712,14 @@ Robot {
       ]
       endPoint Solid {
         translation 1.2 -0.5 0
-        rotation 0.5332002557896636 -0.5982058969082755 -0.5982033033426036 2.16189800432832
+        rotation 0.5772607345665021 -0.5773961111012355 -0.5773939514862552 2.0945421568667935
         children [
           USE COXA_T
           USE COXA_AXIS_S
           USE RAC_Shape
           DEF RAF_HINGE_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.11163165937320803
+              position 0.00047353486623316144
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -731,12 +731,12 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.11123565937456455
+              rotation 0 0 1 7.753486997859007e-05
               children [
                 USE FEMUR_T
                 DEF RAT_HINGE_JOINT HingeJoint {
                   jointParameters HingeJointParameters {
-                    position -0.014707608946341565
+                    position 0.00026339125539277114
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -751,7 +751,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 -0.9999999999999999 0.014727608836159598
+                    rotation 0 0 1 0.00024339136509827879
                     children [
                       USE TIBIA_T
                       DEF ANKLE LED {
@@ -789,8 +789,8 @@ Robot {
                         ]
                       }
                       TouchSensor {
-                        translation 1.6021874901107083 -0.0002903399026479292 0.00036797899906559906
-                        rotation -0.1387920039952298 0.7973477352601689 0.5873443357200849 -4.1945128672615795e-05
+                        translation 1.6021945234071708 -0.0002630838878161512 0.00037186923339049827
+                        rotation 0.12560201260723028 -0.8107691277819291 -0.5717320665003347 4.123677222869607e-05
                         children [
                           USE FOOT_C
                         ]
@@ -800,8 +800,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity 8.324428849115556 5.140903136913074 2.626765980299071
-                        angularVelocity 2.0366025633094953 0.7668687517790103 2.9338863343132515
+                        linearVelocity -0.00011202708737975797 0.0004849468008696789 -2.623037994366584e-05
+                        angularVelocity 0.00013458479546122102 -4.863068081265952e-05 0.0006307501473422507
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -824,8 +824,8 @@ Robot {
                     ]
                     boundingObject USE RAT_Shape
                     physics USE TIBIA_P
-                    linearVelocity 6.2569321072136255 4.002291581811351 4.430839097900732
-                    angularVelocity 2.036776257515924 0.7669701845688524 2.9338881996044384
+                    linearVelocity -0.0005067597135947371 0.0001277592155508245 3.1432976514960236e-05
+                    angularVelocity 0.00013476785352127549 -4.880946585995044e-05 0.000630756567957087
                   }
                 }
                 LED {
@@ -849,8 +849,8 @@ Robot {
               ]
               boundingObject USE RAF_Shape
               physics USE FEMUR_P
-              linearVelocity 2.75289537317248 1.578874797315091 4.564785836984931
-              angularVelocity -1.520699869128431 -1.321603951677902 3.0169765403294164
+              linearVelocity -0.001203841163383412 -0.0005039704157162817 0.00012571061957848074
+              angularVelocity 0.00012844556372311835 -5.479050143348099e-05 0.0006339958932529696
             }
           }
           LED {
@@ -876,13 +876,13 @@ Robot {
         name "RAC"
         boundingObject USE RAC_Shape
         physics USE COXA_P
-        linearVelocity 0.7061445197203553 -0.10496182033475637 2.590414107433452
-        angularVelocity -2.80415113689342 -2.096889314550624 3.0648694238086724
+        linearVelocity -0.0016232540372724642 -0.0008842682246562819 0.00017614643204870716
+        angularVelocity 0.00011598119349224036 -6.625197981041488e-05 0.0006402665501052587
       }
     }
     DEF LAC_HINGE_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.14715253334030126
+        position -0.0016584373609959957
         axis 0 0 1
         anchor 1.2 0.5 0
       }
@@ -894,14 +894,14 @@ Robot {
       ]
       endPoint Solid {
         translation 1.2 0.5 0
-        rotation 0.6344669952482926 0.5465560459488095 0.5465602625304968 2.010848497349759
+        rotation 0.578543982578227 0.5767507339621496 0.5767542380396053 2.092618209870283
         children [
           USE COXA_T
           USE COXA_AXIS_S
           USE RAC_Shape
           DEF LAF_HINGE_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.08185963729533854
+              position 0.00012181836826379541
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -913,12 +913,12 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.08146363729894082
+              rotation 0 0 -1 0.00027418162857138946
               children [
                 USE FEMUR_T
                 DEF LAT_HINGE_JOINT HingeJoint {
                   jointParameters HingeJointParameters {
-                    position 0.042013048303017816
+                    position 7.547069852058594e-05
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -933,7 +933,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 1 0.041993048346591295
+                    rotation 0 0 1 5.547073690578757e-05
                     children [
                       USE TIBIA_T
                       DEF ANKLE LED {
@@ -971,8 +971,8 @@ Robot {
                         ]
                       }
                       TouchSensor {
-                        translation 1.6009903889380155 0.00017539280541711832 0.00012712972463191363
-                        rotation 0.032440486558292805 -0.04106013702660313 0.9986299014045282 4.8493755425741965e-05
+                        translation 1.6009836057510682 0.00018506876523360916 0.00020559749250992354
+                        rotation -0.20926151464939804 -0.040812840456951154 0.9770076409836698 4.8519608078185895e-05
                         children [
                           USE FOOT_C
                         ]
@@ -982,8 +982,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity 4.680418523055414 2.2459704736060355 8.334359271564669
-                        angularVelocity 4.791814742564155 2.343749706850854 -1.620743513776569
+                        linearVelocity -0.003892747542229813 -0.0029388333016925118 0.0003124981170155117
+                        angularVelocity 0.00010184846142162014 -7.7940169178861e-05 0.0006784502138115458
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -1006,8 +1006,8 @@ Robot {
                     ]
                     boundingObject USE RAT_Shape
                     physics USE TIBIA_P
-                    linearVelocity 3.555482497282813 1.4305396146036145 3.8416317813818224
-                    angularVelocity 4.791925361492309 2.3438255752667 -1.620758037381808
+                    linearVelocity -0.0034670256844782444 -0.0025539487551066043 0.0002932939319889449
+                    angularVelocity 0.00010185479400113663 -7.7924736914565e-05 0.0006784491021656217
                   }
                 }
                 LED {
@@ -1031,8 +1031,8 @@ Robot {
               ]
               boundingObject USE RAF_Shape
               physics USE FEMUR_P
-              linearVelocity 1.5819710101830202 0.06200055678467592 -1.3536435407432525
-              angularVelocity 1.7013222474486045 0.39519114028524516 -1.5566565207877967
+              linearVelocity -0.0027168144384975786 -0.0018756286358785706 0.00025510601913850866
+              angularVelocity 0.00010579641248401086 -7.435230129613047e-05 0.0006782217900754368
             }
           }
           LED {
@@ -1058,13 +1058,13 @@ Robot {
         name "LAC"
         boundingObject USE RAC_Shape
         physics USE COXA_P
-        linearVelocity 0.39530361225682203 -0.674282149375611 -2.0335189079561076
-        angularVelocity -2.7729423693369175 -2.4068432559066855 -1.476548310950737
+        linearVelocity -0.0022667962426760374 -0.001468772797784936 0.00022848618282379722
+        angularVelocity 0.0001133685393540377 -6.749438415742251e-05 0.0006777857586623044
       }
     }
     DEF LMC_HINGE_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position 0.47822254394018243
+        position 0.074946396896368
         axis 0 0 1
         anchor 0 0.7 0
       }
@@ -1076,14 +1076,14 @@ Robot {
       ]
       endPoint Solid {
         translation 0 0.7 0
-        rotation 0.3955122944472451 0.6494466297114088 0.6494529236962199 2.3883390113834495
+        rotation 0.5490656783472418 0.5909812751220352 0.5909890128557521 2.137348392637656
         children [
           USE COXA_T
           USE COXA_AXIS_S
           USE RAC_Shape
           DEF LMF_HINGE_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.08540212398197697
+              position 0.003277910368442944
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -1095,12 +1095,12 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.08500612398221188
+              rotation 0 0 1 0.0028819103698107065
               children [
                 USE FEMUR_T
                 DEF LMT_HINGE_JOINT HingeJoint {
                   jointParameters HingeJointParameters {
-                    position 0.0815337437043433
+                    position 0.0017090260333912561
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -1115,7 +1115,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 0.9999999999999999 0.0815137437479274
+                    rotation 0 0 0.9999999999999999 0.0016890260768935603
                     children [
                       USE TIBIA_T
                       DEF ANKLE LED {
@@ -1153,8 +1153,8 @@ Robot {
                         ]
                       }
                       TouchSensor {
-                        translation 1.600720469084969 0.00025591836532612433 0.00022539973340940378
-                        rotation 0.05999302870384747 -0.6172953330914767 0.7844407614666785 3.971605139558064e-05
+                        translation 1.6007240245649896 0.00042939036377731554 0.00013271150388050046
+                        rotation 0.38248879028274135 -0.567748633665362 0.7289470586257686 4.3302057147110056e-05
                         children [
                           USE FOOT_C
                         ]
@@ -1164,8 +1164,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity 1.2202824861768349 1.2557225874642342 2.226735479784983
-                        angularVelocity -1.952938452895879 -0.4695653573193237 -0.5527950006691537
+                        linearVelocity 0.004136126566626217 0.004105888072549533 -0.0003976031592770646
+                        angularVelocity 5.747847899171e-05 -0.00024356461378734694 -0.0025115475743279574
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -1188,8 +1188,8 @@ Robot {
                     ]
                     boundingObject USE RAT_Shape
                     physics USE TIBIA_P
-                    linearVelocity 0.9567579166906265 0.690734457391196 3.230703394953845
-                    angularVelocity -1.9529899741155297 -0.46966234724319467 -0.5527852753416208
+                    linearVelocity 0.0026637723495525727 0.002553273178412782 -0.00028125009167178294
+                    angularVelocity 5.747763192331286e-05 -0.00024357207656200175 -0.002511546487388237
                   }
                 }
                 LED {
@@ -1213,8 +1213,8 @@ Robot {
               ]
               boundingObject USE RAF_Shape
               physics USE FEMUR_P
-              linearVelocity 0.5875647665589047 -0.39908558850964077 0.5200639617184146
-              angularVelocity 0.3275205239575558 5.0413212362638165 -0.8466128115406447
+              linearVelocity 6.799063902008131e-05 -0.0001846305709233319 -7.17180704986655e-05
+              angularVelocity 5.3884158917644216e-05 -0.00024736733783773583 -0.002511241739726284
             }
           }
           LED {
@@ -1240,13 +1240,13 @@ Robot {
         name "LMC"
         boundingObject USE RAC_Shape
         physics USE COXA_P
-        linearVelocity 0.4118015089209852 -1.0367200393413438 -2.618195490863784
-        angularVelocity -2.7115763826625865 -2.2402438034481085 -0.4312395025833213
+        linearVelocity -0.0014896282176977138 -0.0018271822796577912 5.7653169396924925e-05
+        angularVelocity 4.694182416333949e-05 -0.0002546887513943081 -0.002510655417455268
       }
     }
     HingeJoint {
       jointParameters HingeJointParameters {
-        position 0.13040539202444001
+        position -7.553068435695032e-06
         axis 0 0 1
         anchor -1.2 0.5 0
       }
@@ -1258,14 +1258,14 @@ Robot {
       ]
       endPoint Solid {
         translation -1.2 0.5 0
-        rotation 0.5277515169815375 0.6006113574280122 0.6006199577537914 2.1703874382434605
+        rotation 0.5779052546755746 0.5770682380332548 0.5770769145196801 2.0935599064250807
         children [
           USE COXA_T
           USE COXA_AXIS_S
           USE RAC_Shape
           HingeJoint {
             jointParameters HingeJointParameters {
-              position 0.0691414576789473
+              position -8.90147895019093e-05
               axis 0 0 1
               anchor 0.3 0 0
             }
@@ -1277,12 +1277,12 @@ Robot {
             ]
             endPoint Solid {
               translation 0.3 0 0
-              rotation 0 0 1 0.0687454576803018
+              rotation 0 0 -1 0.00048501478813839594
               children [
                 USE FEMUR_T
                 HingeJoint {
                   jointParameters HingeJointParameters {
-                    position 0.05213599408464242
+                    position -3.031089029592593e-05
                     axis 0 0 1
                     anchor 1.5 0 0
                   }
@@ -1297,7 +1297,7 @@ Robot {
                   ]
                   endPoint Solid {
                     translation 1.5 0 0
-                    rotation 0 0 1 0.05211599412822356
+                    rotation 0 0 -1 5.031084859913234e-05
                     children [
                       USE TIBIA_T
                       DEF ANKLE LED {
@@ -1335,8 +1335,8 @@ Robot {
                         ]
                       }
                       TouchSensor {
-                        translation 1.6001175485124932 0.00034368352035585303 -0.000345504493509452
-                        rotation 0.1110562951169896 0.9381446691870885 0.32794981169492393 3.455256910906696e-05
+                        translation 1.6001176151887222 0.00034210849688065537 -0.0003453375250899171
+                        rotation 0.11105719905602414 0.9381442679531142 0.327950653368073 3.455247932468706e-05
                         children [
                           USE FOOT_C
                         ]
@@ -1346,8 +1346,8 @@ Robot {
                           density -1
                           mass 1
                         }
-                        linearVelocity 2.6993728225382565 1.1732129019375355 7.059223162953444
-                        angularVelocity 1.6165721232365786 2.4356710478605037 -0.9715194905472659
+                        linearVelocity -0.0028059815085147294 -0.004160151435897366 5.776531183746769e-05
+                        angularVelocity 0.00011471695367243749 -6.622339692413457e-05 0.0006786509000105374
                       }
                       LED {
                         rotation 0 0 1 1.57
@@ -1370,8 +1370,8 @@ Robot {
                     ]
                     boundingObject USE RAT_Shape
                     physics USE TIBIA_P
-                    linearVelocity 2.0771743348693654 0.6188168805004195 4.629482964190909
-                    angularVelocity 1.612137698337908 2.432215552470618 -0.9714831897956007
+                    linearVelocity -0.0023812207911210383 -0.00377480405453815 2.3567692012473895e-05
+                    angularVelocity 0.00011471695360911914 -6.62233968763615e-05 0.0006786509000112575
                   }
                 }
                 LED {
@@ -1395,8 +1395,8 @@ Robot {
               ]
               boundingObject USE RAF_Shape
               physics USE FEMUR_P
-              linearVelocity 1.134852953998015 -0.48253601587031103 -0.051221186752114845
-              angularVelocity 1.9510507051976806 2.8061155245485105 -0.9903823737208488
+              linearVelocity -0.0016315325996910212 -0.0030952403459916225 -3.684526807147042e-05
+              angularVelocity 0.00011471748728616474 -6.622293668412529e-05 0.0006786502703405599
             }
           }
           LED {
@@ -1422,8 +1422,8 @@ Robot {
         name "LPC"
         boundingObject USE RAC_Shape
         physics USE COXA_P
-        linearVelocity 0.6701582332691993 -1.1753344352132016 -2.018747946732186
-        angularVelocity -2.780526648975119 -2.3804063265573663 -0.7545452287561758
+        linearVelocity -0.0011817100911589733 -0.002687492787586721 -7.309433716942597e-05
+        angularVelocity 0.00011471863868817346 -6.622196398643365e-05 0.0006786484233340122
       }
     }
   ]
@@ -1441,6 +1441,6 @@ Robot {
   }
   controller "mantis"
   supervisor TRUE
-  linearVelocity 0.3265216936997476 -0.6320614249078897 0.3005012750283964
-  angularVelocity -2.7523140471639502 -2.259531660805968 0.36573414375747887
+  linearVelocity -0.0014066189443629961 -0.0017898316424325548 5.252044924746151e-05
+  angularVelocity 0.00011471849807850369 -6.622260101836079e-05 0.0006786356595966928
 }

@@ -91,6 +91,9 @@ def main():
     ]
     
     # For limit settings, we need to swap "lines" with "cols"
+
+    # Important to mention that angles are inverted in C hinges 
+    # (one side moves forward when value is applied, other moves backwards)
     MOTOR_NAMES = [
         "RPC", "RMC", "RAC", "LPC", "LMC", "LAC", # Base (shoulder1, front-backward) motors
         "RPF", "RMF", "RAF", "LPF", "LMF", "LAF", # Base (shoulder2, up_down) motors
@@ -114,16 +117,18 @@ def main():
 
     aC,aF,aT = 0.25, 0.20,  0.05           # perfect value amplitudes (too good)
 
-    # custom values (simple integrity guide)
-    # only keeping aC the same to avoid leg crossing
-    aF *= 15
-    aT *= 30
+    # custom values (simple integrity guide, manually set)
+    # only lowering aC to avoid leg crossing
+    aC /= 1.2
+    aF *= 9
+    aT *= 35
 
 
-    dC,dF,dT = 0.60, 0.80, -2.40           # offsets (centers)
+    # dC,dF,dT = 0.60, 0.80, -2.40           # offsets (theoretically, centers, but not working)
+    dC, dF, dT = 0, 0.8, -2.4
 
-    minC, maxC = dC - aC, dC + aC
-    minF, maxF = dF - aF, dF + aF
+    minC, maxC = dC - aC, dC + aC 
+    minF, maxF = dF - aF, dF + aT
     minT, maxT = dT - aT, dT + aT
 
 
@@ -197,11 +202,10 @@ def main():
                 print("[Controller] Reset em curso...")
                 if is_supervisor:
                     robot.simulationReset()
-                    """
-                    robot_node.getField("translation").setSFVec3f([0, 0, 0.02])
-                    robot_node.getField("rotation").setSFRotation([1, 0, 0, 1.57])
-                    for motor in motors: motor.setPosition(float('0'))
-                    """
+
+                    # Only needs to be done once if world is correctly saved
+                    # otherwise, disable actions and run this once, then save
+                    # for i in range(18): motors[i].setPosition(0)
 
                 sock.sendall((json.dumps({"status": "reset_complete"}) + "\n").encode("utf-8"))
                 continue
@@ -215,6 +219,7 @@ def main():
             print(e)
             print(data)
             continue
+
 
         for i in range(18):
             # Normalizing motor input values (for safety and stability)
@@ -245,6 +250,7 @@ def main():
             #motors[i].setVelocity(pos)
 
 
+
                                             # ---------- Sensor Readings ---------- #
 
         # IMU
@@ -253,14 +259,13 @@ def main():
         #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
         imu_values = [roll, pitch, yaw]
 
-        # Read joint sensor angle values
+        # Read joint sensor rad values
 
         joint_values = []
         #print("---------------------------------------")
-        for sensor in joint_sensors:
+        for motor in motors:
             #print("Positional sensor value: ", math.degrees(sensor.getValue()))
-            if sensor: joint_values.append(sensor.getValue())
-            else: joint_values.append(None)
+            joint_values.append(motor.getTargetPosition())
         #print("---------------------------------------")
 
 
@@ -296,7 +301,7 @@ def main():
         observation = {
             # joint angles
             #"joint_robot_hdiff": joint_robot_hdiff,
-            "joint_sensors" : joint_values,
+            "joint_sensors" : joint_values, # 18 values
 
             # roll, pitch and yaw
             "imu": imu_values, # 3 values

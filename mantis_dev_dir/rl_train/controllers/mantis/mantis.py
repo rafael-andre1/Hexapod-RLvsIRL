@@ -2,6 +2,7 @@ import socket
 import math
 import json
 import random
+import numpy as np
 import time
 from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, TouchSensor
 
@@ -12,7 +13,7 @@ Este socket TCP (Transmission Control Protocol) permite troca de infomração bi
 Para evitar correr a simulação inteira na UI do webots, utilizamos este socket para treinar apenas em python.
 Essencialmente, o environment de gymnasium cria um servidor local, ao qual `controller.py` vai aceder.
 
-# -------- Fluxo -------- #
+                                        # -------- Fluxo -------- #
 
 A cada passo (step()):
 
@@ -26,6 +27,8 @@ A cada passo (step()):
   
  - Com base na reward, gym decide o próximo passo
 """
+
+# ----------------------- Socket Setup ----------------------- #
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -49,6 +52,8 @@ if not connected:
     print("[Controller] Could not connect to RL environment after several attempts. Exiting.")
     exit(1)
 
+# --------------------------------------------------------- #
+
 
 print("Entered RL Controller.")
 
@@ -69,14 +74,14 @@ def main():
 
     # --------------- Motor and Joint Sensor Initialization --------------- #
 
-    # Ending in C: controls leg forward-backward movements
-    # Ending in F: controls body hinge (shoulder?) up-down
+    # Ending in C: controls leg (shoulder1?) forward-backward movements
+    # Ending in F: controls body hinge (shoulder2?) up-down
     # Ending in T: controls arm hinge (elbow?) up-down
 
     # Anterior -> "face" of the robot
     # Posterior -> back of the robot
 
-    MOTOR_NAMES = [
+    MOTOR_EXPLANATION = [
         "RPC", "RPF", "RPT",  # Right Posterior Controls
         "RMC", "RMF", "RMT",  # Right Middle Controls
         "RAC", "RAF", "RAT",  # Right Anterior Controls
@@ -84,6 +89,14 @@ def main():
         "LMC", "LMF", "LMT",  # Left Middle Controls
         "LAC", "LAF", "LAT"   # Left Anterior Controls
     ]
+    
+    # For limit settings, we need to swap "lines" with "cols"
+    MOTOR_NAMES = [
+        "RPC", "RMC", "RAC", "LPC", "LMC", "LAC", # Base (shoulder1, front-backward) motors
+        "RPF", "RMF", "RAF", "LPF", "LMF", "LAF", # Base (shoulder2, up_down) motors
+        "RPT", "RMT", "RAT", "LPT", "LMT", "LAT"  # Hinge (elbow, up-down) motors
+    ]
+
     motors, joint_sensors = [], []
     for name in MOTOR_NAMES:
         m = robot.getDevice(name)
@@ -95,6 +108,23 @@ def main():
                 ps.enable(timestep)
                 joint_sensors.append(ps)
         motors.append(m)
+
+    
+    # Integrity Limits for each motor (in radians)
+
+    aC,aF,aT = 0.25, 0.20,  0.05           # perfect value amplitudes (too good)
+
+    # custom values (simple integrity guide)
+    # only keeping aC the same to avoid leg crossing
+    aF *= 15
+    aT *= 30
+
+
+    dC,dF,dT = 0.60, 0.80, -2.40           # offsets (centers)
+
+    minC, maxC = dC - aC, dC + aC
+    minF, maxF = dF - aF, dF + aF
+    minT, maxT = dT - aT, dT + aT
 
 
     # --------------- IMU  --------------- #
@@ -191,9 +221,28 @@ def main():
             #min_pos, max_pos = motors[i].getMinPosition(), motors[i].getMaxPosition()
             #pos = 0.5 * (action[i] + 1) * (max_pos - min_pos) + min_pos
             pos=action[i]
-            #motors[i].setPosition(pos)
-            motors[i].setPosition(math.inf);
-            motors[i].setVelocity(pos)
+
+            # Normalizing to integrity limits based on "body part"
+
+            # First 6 are C motors: shoulder forward-backward
+            if i<6:
+                pos = max(minC, pos)
+                pos = min(maxC, pos)
+
+            # The following 6 are F motors: shoulder up-down
+            elif i<12:
+                pos = max(minF, pos)
+                pos = min(maxF, pos)
+
+            # Final are T motors: elbow up-down
+            elif i<18:
+                pos = max(minT, pos)
+                pos = min(maxT, pos)
+
+
+            motors[i].setPosition(pos)
+            #motors[i].setPosition(math.inf)
+            #motors[i].setVelocity(pos)
 
 
                                             # ---------- Sensor Readings ---------- #

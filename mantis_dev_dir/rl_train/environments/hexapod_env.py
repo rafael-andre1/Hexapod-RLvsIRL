@@ -70,25 +70,22 @@ class HexapodEnv(gym.Env):
 
         # Reward function metrics
         self.prev_com = None
+        self.is_tilted = True
         self.prev_pos = 0
         self.total_steps = 0
         self.stable_counter = 0
-
+        
     def get_initial_observation(self):
         # TODO: Currently not used, should be straightforward to define
         # as the starting point should be easy to generate
         return np.zeros(OBS_SPACE_SIZE)
     
-    def check_done(self, com, step_count, max_steps=500):
-        # TODO: optimize and add conditions:
-        # - time step limit is reached
-        # - body too low
-
-        # TODO: should these conditions stop episode when its really bad or...
-        # TODO: when it has achieved what we are looking for? both?
-        # If good -> nothing else to learn
-        # If terrible for a long time -> fresh start
-        if (step_count >= max_steps) or (self.stable_counter >= 10):
+    def check_done(self, com, step_count, max_steps=800):
+        # TODO: add other task "dones"
+        # for "stand up"
+        if step_count % 100 == 0:
+            print("Step: ", step_count)
+        if (step_count >= max_steps) or (self.stable_counter >= 80 and self.is_tilted == False):
             return True
         return False
 
@@ -105,7 +102,6 @@ class HexapodEnv(gym.Env):
 
         # Sanitizing values to avoid inf when robot flips over
         lidar_values = [v if math.isfinite(v) else 999 for v in lidar_values_original]
-
         theta, acc = imu_data[0], imu_data[1]
         com_height = com[2]
 
@@ -114,17 +110,19 @@ class HexapodEnv(gym.Env):
             reward = 0 # starts at zero, based on conditions changes value
 
             # Acceptable height + stability at height
-            h_base = 4.5 # empirically defined as reasonable height
-            diff = abs(max(lidar_values) - h_base)
-            if diff <= 0.4:
+            h_base = 3 # empirically defined as reasonable height
+            print(lidar_values)
+            diff = abs(lidar_values[1] - h_base)
+            if diff <= 1:
                 self.stable_counter += 1
+                print("Stable...", self.stable_counter)
                 # The more stable, the higher the reward
                 # In order to avoid explosive increase,
                 # we consider 20% of total steps being stable
                 # as multiplier for reward
 
-                reward += 1 * (0.2 * self.stable_counter)
-            elif diff >5:
+                reward += (1 + (0.05 * self.stable_counter)) if self.is_tilted==False else 1
+            elif diff > 4:
                 reward -= 0.5
                 self.stable_counter = 0
             else:
@@ -132,11 +130,14 @@ class HexapodEnv(gym.Env):
                 self.stable_counter = 0
 
             # For every foot that's not touching the ground, we take points
+
+            """
             for v in foot_contacts:
                 if v == 0: reward -= 0.5
                 elif v == 1: reward += 1
                 else: print("NON-READABLE FOOT SENSOR VALUE! ", v)
-
+            """
+                
             """
              Following the mantis tutorial, after reading the .wbt
               file values for the hinge position:
@@ -160,17 +161,23 @@ class HexapodEnv(gym.Env):
             minF, maxF = dF - aF, dF + aF
             minT, maxT = dT - aT, dT + aT
 
+            # Shoulders are not as important as elbow bend, so their reward is smaller
             for i in range(18):
                 if i < 6:
-                    if minC <= joint_sensors[i] <= maxC: reward += 1
+                    if minC <= joint_sensors[i] <= maxC: 
+                        # print("Considers perfect interval for base!")
+                        reward += 0.2
                     else: reward -= 1
 
                 elif i < 12:
-                    if minF <= joint_sensors[i] <= maxF: reward += 1
+                    if minF <= joint_sensors[i] <= maxF: 
+                        reward += 0.2
                     else: reward -= 1
 
                 elif i < 18:
-                    if minT <= joint_sensors[i] <= maxT: reward += 1
+                    if minT <= joint_sensors[i] <= maxT:
+                        print("Considers perfect interval for elbow!")
+                        reward += 1
                     else: reward -= 1
 
 
@@ -178,14 +185,19 @@ class HexapodEnv(gym.Env):
             # Tilt control helps avoid flipping over
             threshold = 0.1  # radians (~5.7 degrees)
             if abs(roll) < 0.1 and abs(pitch) < 0.1:
+                self.is_tilted = False
                 reward += 2  # Great stability
             elif abs(roll) < 0.3 and abs(pitch) < 0.3:
                 reward += 1  # Good stability
+                self.is_tilted = True
             elif abs(roll) < 0.6 and abs(pitch) < 0.6:
                 reward -= 1  # Slightly unstable
+                self.is_tilted = True
 
             # Rolling over or being very tilted is highly penalized
-            else: reward-= 3
+            else:
+                reward -= 3
+                self.is_tilted = True
 
 
         elif self.task == 'walk':

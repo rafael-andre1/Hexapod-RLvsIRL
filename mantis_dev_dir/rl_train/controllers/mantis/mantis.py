@@ -55,6 +55,18 @@ if not connected:
 # --------------------------------------------------------- #
 
 
+def cappedVelocity(cur_pos, vel, max_pos, min_pos, timestep=1000):
+    # Max and Min velocity values based on previously defined integrity limits
+    v_max, v_min = ((max_pos - cur_pos) / timestep), ((min_pos - cur_pos) / timestep)
+
+    # first, prevent from going over the maximum value
+    v_capped = min(v_max, vel)
+
+    # finally, prevent from going under the minimum value
+    return max(v_min, v_capped)
+
+
+
 print("Entered RL Controller.")
 
 #os.environ["WEBOTS_HOME"] = '/usr/local/webots'
@@ -220,6 +232,36 @@ def main():
             print(data)
             continue
 
+        # Fetch current position values
+        joint_values = []
+        #print("---------------------------------------")
+        for motor in motors:
+            joint_values.append(motor.getTargetPosition())
+
+
+        """
+        
+            for i in range(18):
+            vel = action[i]
+            cur_pos = joint_values[i]
+
+            # Normalizing to integrity limits based on "body part"
+            # ==
+            # Blocking velocity from integrity violation levels
+
+            # First 6 are C motors: shoulder forward-backward
+            if i<6: cappedVelocity(cur_pos, vel, minC, maxC)
+
+            # The following 6 are F motors: shoulder up-down
+            elif i<12: cappedVelocity(cur_pos, vel, minF, maxF)
+
+            # Final are T motors: elbow up-down
+            elif i<18: cappedVelocity(cur_pos, vel, minT, maxT)
+
+            motors[i].setPosition(math.inf)
+            motors[i].setVelocity(vel)
+        
+        """
 
         for i in range(18):
             # Normalizing motor input values (for safety and stability)
@@ -244,13 +286,9 @@ def main():
                 pos = max(minT, pos)
                 pos = min(maxT, pos)
 
-
+            motors[i].setVelocity(0.5)
             motors[i].setPosition(pos)
-            #motors[i].setPosition(math.inf)
-            #motors[i].setVelocity(pos)
-
-
-
+            
                                             # ---------- Sensor Readings ---------- #
 
         # IMU
@@ -259,8 +297,7 @@ def main():
         #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
         imu_values = [roll, pitch, yaw]
 
-        # Read joint sensor rad values
-
+        # Read joint sensor rad values (after applying velocity)
         joint_values = []
         #print("---------------------------------------")
         for motor in motors:
@@ -268,11 +305,6 @@ def main():
             joint_values.append(motor.getTargetPosition())
         #print("---------------------------------------")
 
-
-        # Difference between joint and robot heights
-        joint_robot_hdiff = []
-        robot_position = robot_translation_field.getSFVec3f()
-        robot_height = robot_position[2]
 
         """
         for h in elbow_hinges_frames:

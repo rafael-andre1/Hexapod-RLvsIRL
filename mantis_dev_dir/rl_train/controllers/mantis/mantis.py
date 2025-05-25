@@ -327,6 +327,7 @@ def main():
 
         # We only want to see "forward": lidar points to the floor
         lidar_values = [p.x for p in point_cloud]
+        print(lidar_values)
 
 
         # Collection of all relevant sensor/supervisor values

@@ -52,7 +52,7 @@ class HexapodEnv(gym.Env):
             "--stdout",
             "worlds/mantis.wbt"
         ])
-        time.sleep(5)
+        time.sleep(2)
 
         # Set up socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -111,7 +111,6 @@ class HexapodEnv(gym.Env):
 
             # Acceptable height + stability at height
             h_base = 3 # empirically defined as reasonable height
-            print(lidar_values)
             diff = abs(lidar_values[1] - h_base)
             if diff <= 1:
                 self.stable_counter += 1

@@ -283,7 +283,7 @@ def main():
                 pos = max(minT, pos)
                 pos = min(maxT, pos)
 
-            motors[i].setVelocity(0.5)
+            motors[i].setVelocity(0.4)
             motors[i].setPosition(pos)
             
                                             # ---------- Sensor Readings ---------- #

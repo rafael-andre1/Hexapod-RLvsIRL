@@ -144,7 +144,7 @@ class HexapodEnv(gym.Env):
                 # as multiplier for reward
                 # (1 + (0.005 * self.stable_counter)) if self.is_tilted==False
                 reward += 1 + self.checkTilt(pitch, roll)
-            elif diff < 2.6:
+            elif  2.2 <= diff < 2.6:
                 reward -= 0.5
                 self.stable_counter = 0
             else:

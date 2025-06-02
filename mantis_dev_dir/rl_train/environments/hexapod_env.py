@@ -22,6 +22,8 @@ if is_port_in_use(5000):
     raise RuntimeError("Port 5000 is already in use. Please close existing process.")
 
 
+
+
 class HexapodEnv(gym.Env):
     def __init__(self, task='stand_up'):
         super().__init__()
@@ -74,54 +76,75 @@ class HexapodEnv(gym.Env):
         self.prev_pos = 0
         self.total_steps = 0
         self.stable_counter = 0
+        self.starting_height = None
         
-    def get_initial_observation(self):
-        # TODO: Currently not used, should be straightforward to define
-        # as the starting point should be easy to generate
-        return np.zeros(OBS_SPACE_SIZE)
     
     def check_done(self, com, step_count, max_steps=800):
         # TODO: add other task "dones"
         # for "stand up"
         if step_count % 100 == 0:
             print("Step: ", step_count)
-        if (step_count >= max_steps) or (self.stable_counter >= 80 and self.is_tilted == False):
+        if (step_count >= max_steps) or (self.stable_counter >= 800 and self.is_tilted == False):
             return True
         return False
+    
+    def checkTilt(self, pitch, roll):
+        # Tilt control helps avoid flipping over
+        # 0.1 radians ~ 5.7 degrees
+        self.is_tilted = True
+        if abs(roll) < 0.1 and abs(pitch) < 0.1:
+            self.is_tilted = False
+            return 2  # Great stability
+        elif abs(roll) < 0.3 and abs(pitch) < 0.3:
+            return 1  # Good stability
+        elif abs(roll) < 0.6 and abs(pitch) < 0.6:
+            return 1  # Slightly unstable
+
+        # Rolling over or being very tilted is highly penalized
+        return 3
+            
 
 
     def compute_rewards(self, obs):
-        imu_data = obs['imu']  # [theta, acc]
-        com = obs['com']       # [x, y, z]
+        imu_data = obs['imu']                 # [theta, acc]
+        com = obs['com']                      # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
-        lidar_values_original = obs['lidar']
+        robot_pose = obs["robot_pose"]        # [x, y, z]
         joint_sensors = obs['joint_sensors']
-        #hinge_robot_hdiff = obs["hinge_robot_hdiff"]
         imu_values = obs['imu']
         roll, pitch, yaw = imu_values[0], imu_values[1], imu_values[2]
-
-        # Sanitizing values to avoid inf when robot flips over
-        lidar_values = [v if math.isfinite(v) else 999 for v in lidar_values_original]
         theta, acc = imu_data[0], imu_data[1]
         com_height = com[2]
+
+        """ Lidar code
+        # lidar_values_original = obs['lidar']
+        # Sanitizing values to avoid inf when robot flips over
+        lidar_values = [v if math.isfinite(v) else 999 for v in lidar_values_original]
+
+        [...]
+
+        # Acceptable height + stability at height
+            h_base = 3 # empirically defined as reasonable height
+            diff = abs(lidar_values[1] - h_base)
+        """
+        
 
         # TODO: needs fine tuning and actual motor position sensor values
         if self.task == 'stand_up':
             reward = 0 # starts at zero, based on conditions changes value
 
             # Acceptable height + stability at height
-            h_base = 3 # empirically defined as reasonable height
-            diff = abs(lidar_values[1] - h_base)
-            if diff <= 1:
-                self.stable_counter += 1
-                print("Stable...", self.stable_counter)
+            h_base = 3
+            diff = abs(robot_pose[2] - h_base)
+            print(diff)
+            if 1.8 <= diff <= 2.2:
                 # The more stable, the higher the reward
                 # In order to avoid explosive increase,
                 # we consider 20% of total steps being stable
                 # as multiplier for reward
-
-                reward += (1 + (0.05 * self.stable_counter)) if self.is_tilted==False else 1
-            elif diff > 4:
+                # (1 + (0.005 * self.stable_counter)) if self.is_tilted==False
+                reward += 1 + self.checkTilt(pitch, roll)
+            elif diff < 2.6:
                 reward -= 0.5
                 self.stable_counter = 0
             else:
@@ -130,12 +153,12 @@ class HexapodEnv(gym.Env):
 
             # For every foot that's not touching the ground, we take points
 
-            """
+            
             for v in foot_contacts:
                 if v == 0: reward -= 0.5
                 elif v == 1: reward += 1
                 else: print("NON-READABLE FOOT SENSOR VALUE! ", v)
-            """
+           
                 
             """
              Following the mantis tutorial, after reading the .wbt
@@ -152,7 +175,8 @@ class HexapodEnv(gym.Env):
              However, the correct sensor placement is being blocked by internal 
              Webots processes. This makes it impossible to measure.
             """
-            
+
+            """
             # Acceptable arm position (hinge safety and correct execution of task)
             aC, aF, aT = 0.25, 0.20, 0.05  # perfect value amplitudes
             dC, dF, dT = 0.60, 0.80, -2.40  # offsets (centers)
@@ -176,28 +200,11 @@ class HexapodEnv(gym.Env):
                 elif i < 18:
                     if minT <= joint_sensors[i] <= maxT:
                         print("Considers perfect interval for elbow!")
-                        reward += 1
+                        reward += 0.2
                     else: reward -= 1
+            """
 
-
-
-            # Tilt control helps avoid flipping over
-            threshold = 0.1  # radians (~5.7 degrees)
-            if abs(roll) < 0.1 and abs(pitch) < 0.1:
-                self.is_tilted = False
-                reward += 2  # Great stability
-            elif abs(roll) < 0.3 and abs(pitch) < 0.3:
-                reward += 1  # Good stability
-                self.is_tilted = True
-            elif abs(roll) < 0.6 and abs(pitch) < 0.6:
-                reward -= 1  # Slightly unstable
-                self.is_tilted = True
-
-            # Rolling over or being very tilted is highly penalized
-            else:
-                reward -= 3
-                self.is_tilted = True
-
+        
 
         elif self.task == 'walk':
             # === BASE HEIGHT ===

@@ -174,9 +174,6 @@ def main():
 
     elbow_hinges_frames = []
 
-    # Get robot node and translation field
-    robot_translation_field = robot_node.getField("translation")
-
     # Get a specific hinge/joint node
     elbow_hinges = ["RPT", "RMT", "RAT", "LPT", "LMT", "LAT" ]
     for h in elbow_hinges:
@@ -322,13 +319,17 @@ def main():
         # Get center of mass approximation (using the robot's translation field)
         com = robot_node.getCenterOfMass()
 
+        # Get the robot's position (also using the robot's translation field)
+        robot_pose = list(robot_node.getField("translation").getSFVec3f())
+
+        """ Unfortunately, sensors do not work.
         # Reads point cloud values
         point_cloud = lidar.getPointCloud()
 
         # We only want to see "forward": lidar points to the floor
         lidar_values = [p.x for p in point_cloud]
         print(lidar_values)
-
+        """
 
         # Collection of all relevant sensor/supervisor values
         observation = {
@@ -346,7 +347,8 @@ def main():
             "com": com, # 3 values
 
             # robot distance to the ground
-            "lidar": lidar_values # 3 values
+            #"lidar": lidar_values # 3 values (previous implementation)
+            "robot_pose": robot_pose # 3 values
 
         }
 

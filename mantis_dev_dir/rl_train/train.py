@@ -38,13 +38,13 @@ print(f"Using device: {device}")
 print("############################")
 print("#######   WARNING    #######")
 print("############################")
-print("ACTIONS CURRENTLY DISABLE FOR INITIAL OBS READING")
+print("ACTIONS CURRENTLY DISABLED FOR INITIAL OBS READING")
 """
 
 # Model choice
 model = PPO("MlpPolicy", env, verbose=1, device=device)
 
 # Model training
-model.learn(total_timesteps=250000, callback=TqdmCallback())
+model.learn(total_timesteps=180000, callback=TqdmCallback())
 model.save("hexapod_ppo_model")
 env.close()

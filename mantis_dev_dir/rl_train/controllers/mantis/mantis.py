@@ -131,9 +131,9 @@ def main():
 
     # custom values (simple integrity guide, manually set)
     # only lowering aC to avoid leg crossing
-    aC /= 1.2
-    aF *= 9
-    aT *= 35
+    aC /= 1.5
+    aF *= 8
+    aT *= 30
 
 
     # dC,dF,dT = 0.60, 0.80, -2.40           # offsets (theoretically, centers, but not working)

@@ -98,10 +98,10 @@ class HexapodEnv(gym.Env):
         elif abs(roll) < 0.3 and abs(pitch) < 0.3:
             return 1  # Good stability
         elif abs(roll) < 0.6 and abs(pitch) < 0.6:
-            return 1  # Slightly unstable
+            return -1  # Slightly unstable
 
         # Rolling over or being very tilted is highly penalized
-        return 3
+        return -3
             
 
 
@@ -128,16 +128,14 @@ class HexapodEnv(gym.Env):
             diff = abs(lidar_values[1] - h_base)
         """
         
-
-        # TODO: needs fine tuning and actual motor position sensor values
-        if self.task == 'stand_up':
+        if self.task == 'stand_up' or self.task == 'walk':
             reward = 0 # starts at zero, based on conditions changes value
 
             # Acceptable height + stability at height
             h_base = 3
             diff = abs(robot_pose[2] - h_base)
-            print(diff)
-            if 1.8 <= diff <= 2.2:
+            # print(diff)
+            if 1.9 <= diff <= 2.1:
                 # The more stable, the higher the reward
                 # In order to avoid explosive increase,
                 # we consider 20% of total steps being stable
@@ -204,30 +202,10 @@ class HexapodEnv(gym.Env):
                     else: reward -= 1
             """
 
-        
+            if self.task == 'walk':
+                if self.checkTilt(pitch, roll) >= 1: reward += (robot_pose[0] + robot_pose[1])
+                else: reward -= 1
 
-        elif self.task == 'walk':
-            # === BASE HEIGHT ===
-            h_base = 1.0  # expected standing height
-            h_error = abs(com_height - h_base)
-
-            # Reward for being upright (standing height)
-            reward_height = max(0.0, 1.0 - h_error / 0.2)  # normalized (0 to 1), tolerant to ±0.2m
-
-            # === STABILITY ===
-            max_theta = 0.5  # radians (≈28°)
-            reward_stability = max(0.0, 1.0 - abs(theta) / max_theta)
-
-            # === CONTACT POINTS ===
-            feet_on_ground = sum(1 for contact in foot_contacts if contact > 0.5)  # threshold to avoid noise
-            reward_feet = feet_on_ground / 6.0  # encourage all feet on ground
-
-            # === FINAL REWARD ===
-            reward = (
-                    0.5 * reward_height +  # prioritize height
-                    0.3 * reward_stability +  # stability also matters
-                    0.2 * reward_feet  # contact is important but less critical
-            )
 
         elif self.task == 'climb':
             delta_step = 1 if com[2] > self.prev_com[2] + 0.05 else 0

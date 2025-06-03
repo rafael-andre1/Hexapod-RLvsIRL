@@ -21,14 +21,14 @@ PROTO RobocupGoal [
     let C, D, goal_height;
     if (fields.size.value === 'kid') {
       // KidSize dimensions
-      C = 0.6;
-      D = 2.6;
-      goal_height = 1.2;
+      C = 1.6;
+      D = 3.6;
+      goal_height = 3.2;
     } else {
       // AdultSize dimensions
-      C = 0.6;
-      D = 2.6;
-      goal_height = 1.8;
+      C = 1.6;
+      D = 3.6;
+      goal_height = 3.8;
     }
 
     const post_radius = 0.05; // Diameter/width/depth must be between 0.08-0.12

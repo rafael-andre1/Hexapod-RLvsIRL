@@ -101,7 +101,7 @@ class HexapodEnv(gym.Env):
             return -1  # Slightly unstable
 
         # Rolling over or being very tilted is highly penalized
-        return -3
+        return -5
             
 
 
@@ -136,11 +136,14 @@ class HexapodEnv(gym.Env):
             diff = abs(robot_pose[2] - h_base)
             # print(diff)
             if 1.9 <= diff <= 2.1:
+
+                # For future implementations:
                 # The more stable, the higher the reward
                 # In order to avoid explosive increase,
                 # we consider 20% of total steps being stable
                 # as multiplier for reward
                 # (1 + (0.005 * self.stable_counter)) if self.is_tilted==False
+
                 reward += 1 + self.checkTilt(pitch, roll)
             elif  2.2 <= diff < 2.6:
                 reward -= 0.5
@@ -151,11 +154,12 @@ class HexapodEnv(gym.Env):
 
             # For every foot that's not touching the ground, we take points
 
-            
-            for v in foot_contacts:
+            """        
+                for v in foot_contacts:
                 if v == 0: reward -= 0.5
                 elif v == 1: reward += 1
                 else: print("NON-READABLE FOOT SENSOR VALUE! ", v)
+            """
            
                 
             """

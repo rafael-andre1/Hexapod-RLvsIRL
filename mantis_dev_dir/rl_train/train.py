@@ -5,6 +5,7 @@ from tqdm import tqdm
 from stable_baselines3.common.callbacks import BaseCallback
 
 import torch
+import os
 
 # Custom callbacks (times function for runtime prediction)
 class TqdmCallback(BaseCallback):
@@ -42,9 +43,14 @@ print("ACTIONS CURRENTLY DISABLED FOR INITIAL OBS READING")
 """
 
 # Model choice
-model = PPO("MlpPolicy", env, verbose=1, device=device)
+
+choice = str(input("Would you like to use transfer learning for walking? "))
+model_path=r"C:\Users\hasht\Desktop\saved_model"
+if choice == "yes": model = PPO.load(model_path+"\\hexapod_ppo_bestStandUp", env=env, device=device)
+else: model = PPO("MlpPolicy", env, verbose=1, device=device)
 
 # Model training
-model.learn(total_timesteps=180000, callback=TqdmCallback())
+# model.learn(total_timesteps=180000, callback=TqdmCallback()) for stand_up
+model.learn(total_timesteps=250000, callback=TqdmCallback()) # for walk
 model.save("hexapod_ppo_model")
 env.close()

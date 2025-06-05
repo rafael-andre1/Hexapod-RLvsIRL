@@ -25,7 +25,7 @@ if is_port_in_use(5000):
 
 
 class HexapodEnv(gym.Env):
-    def __init__(self, task='stand_up'):
+    def __init__(self, task='walk'):
         super().__init__()
         self.task = task
         # Action space -> 18 actuators
@@ -77,6 +77,7 @@ class HexapodEnv(gym.Env):
         self.total_steps = 0
         self.stable_counter = 0
         self.starting_height = None
+        self.cur_dist = 0
         
     
     def check_done(self, com, step_count, max_steps=800):
@@ -84,7 +85,14 @@ class HexapodEnv(gym.Env):
         # for "stand up"
         if step_count % 100 == 0:
             print("Step: ", step_count)
-        if (step_count >= max_steps) or (self.stable_counter >= 800 and self.is_tilted == False):
+        if (self.task == "stand_up" and
+                ((step_count >= max_steps) or
+                (self.stable_counter >= 800 and self.is_tilted == False))):
+            return True
+
+        if (self.task == "walk" and
+                ((step_count >= max_steps*4) or
+                (self.is_tilted == False and abs(self.cur_dist) >= 10))):
             return True
         return False
     
@@ -207,7 +215,11 @@ class HexapodEnv(gym.Env):
             """
 
             if self.task == 'walk':
-                if self.checkTilt(pitch, roll) >= 1: reward += (robot_pose[0] + robot_pose[1])
+                # Walking forward is -x (negative) and not moving on y
+                # so if I take points for negative x plus y, I give points
+                # when it walks forward in a straight line
+                self.cur_dist = robot_pose[0]
+                if self.checkTilt(pitch, roll) >= 1: reward -= 2*(robot_pose[0] + robot_pose[0])
                 else: reward -= 1
 
 

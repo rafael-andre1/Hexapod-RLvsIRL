@@ -10,7 +10,9 @@ import json
 import subprocess
 import time
 
-OBS_SPACE_SIZE = 30
+
+# 12, observation space should not include the 18 actions
+OBS_SPACE_SIZE = 12
 
 
 def is_port_in_use(port, host="127.0.0.1"):
@@ -25,7 +27,7 @@ if is_port_in_use(5000):
 
 
 class HexapodEnv(gym.Env):
-    def __init__(self, task='walk'):
+    def __init__(self, task):
         super().__init__()
         self.task = task
         # Action space -> 18 actuators
@@ -78,9 +80,12 @@ class HexapodEnv(gym.Env):
         self.stable_counter = 0
         self.starting_height = None
         self.cur_dist = 0
+
+        # Gail
+        self.num_envs = 1
         
     
-    def check_done(self, com, step_count, max_steps=800):
+    def check_done(self, step_count, max_steps=800):
         # TODO: add other task "dones"
         # for "stand up"
         if step_count % 100 == 0:
@@ -90,9 +95,12 @@ class HexapodEnv(gym.Env):
                 (self.stable_counter >= 800 and self.is_tilted == False))):
             return True
 
+        # TODO: Add communication abilities to have unlocked
+        # TODO: episode length ONLY on expert mode (stops when lengths differ)
         if (self.task == "walk" and
-                ((step_count >= max_steps*4) or
-                (self.is_tilted == False and abs(self.cur_dist) >= 10))):
+                ((step_count >= max_steps*3)
+                 #or(self.is_tilted == False and abs(self.cur_dist) >= 10)
+        )):
             return True
         return False
     
@@ -115,14 +123,14 @@ class HexapodEnv(gym.Env):
 
     def compute_rewards(self, obs):
         imu_data = obs['imu']                 # [theta, acc]
-        com = obs['com']                      # [x, y, z]
+        #com = obs['com']                      # [x, y, z]
         foot_contacts = obs['foot_contacts']  # [foot1, foot2, ... , foot6]
         robot_pose = obs["robot_pose"]        # [x, y, z]
         joint_sensors = obs['joint_sensors']
         imu_values = obs['imu']
         roll, pitch, yaw = imu_values[0], imu_values[1], imu_values[2]
-        theta, acc = imu_data[0], imu_data[1]
-        com_height = com[2]
+        #theta, acc = imu_data[0], imu_data[1]
+        #com_height = com[2]
 
         """ Lidar code
         # lidar_values_original = obs['lidar']
@@ -224,15 +232,16 @@ class HexapodEnv(gym.Env):
 
 
         elif self.task == 'climb':
-            delta_step = 1 if com[2] > self.prev_com[2] + 0.05 else 0
-            reward = delta_step
+            #delta_step = 1 if com[2] > self.prev_com[2] + 0.05 else 0
+            #reward = delta_step
             # done = delta_step == 0 and self.total_steps > 10
+            pass
 
         else:
             reward = 0
             # done = False
 
-        self.prev_com = com
+        #self.prev_com = com
         return reward
 
     def step(self, action):
@@ -247,7 +256,8 @@ class HexapodEnv(gym.Env):
 
         # Transforms into numpy array for efficiency of reward calculations
         observation = np.array(
-            obs['joint_sensors'] + obs['imu'] + obs['foot_contacts'] + obs['com'],
+            # obs['joint_sensors'] +
+            obs['imu'] + obs['foot_contacts'] + obs["robot_pose"],
             dtype=np.float32
         )
 
@@ -259,14 +269,15 @@ class HexapodEnv(gym.Env):
         print("Center of mass:", obs['com'])
         """
 
-        com = obs['com']
+        #com = obs['com']
 
         reward = self.compute_rewards(obs)
         
         # TODO: Currently assumes 20 episodes of 500 steps each
         # (10.000 timesteps / 500 max steps -> 20 episodes)
-        done = self.check_done(com, self.total_steps)
+        done = self.check_done(self.total_steps)
         self.total_steps += 1
+
 
         return observation, reward, done, False, {}
 

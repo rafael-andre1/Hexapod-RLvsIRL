@@ -66,6 +66,37 @@ def cappedVelocity(cur_pos, vel, max_pos, min_pos, timestep=1000):
     return max(v_min, v_capped)
 
 
+def getExpertVelocity(motor_name):
+    # Average velocities computed over the time steps (from 0.02s to 0.05s)
+    # of the first few actions of the expert
+
+    # These are just for smoothness of movement, therefore they must be abs()
+    avg_velocities = {
+        "RPC": 0.7814,
+        "RPF": -0.3139,
+        "RPT": 0.1340,
+        "RMC": -0.7814,
+        "RMF": 0.3139,
+        "RMT": -0.1340,
+        "RAC": 0.7814,
+        "RAF": -0.3139,
+        "RAT": 0.1340,
+        "LPC": 0.7814,
+        "LPF": 0.3139,
+        "LPT": -0.1340,
+        "LMC": -0.7814,
+        "LMF": -0.3139,
+        "LMT": 0.1340,
+        "LAC": 0.7814,
+        "LAF": 0.3139,
+        "LAT": -0.1340,
+    }
+
+    if motor_name not in avg_velocities:
+        raise ValueError(f"Motor name '{motor_name}' not found.")
+
+    return abs(avg_velocities[motor_name])
+
 
 print("Entered RL Controller.")
 
@@ -214,8 +245,6 @@ def main():
 
                     # Only needs to be done once if world is correctly saved
                     # otherwise, disable actions and run this once, then save
-                    # for i in range(18): motors[i].setPosition(0)
-
                 sock.sendall((json.dumps({"status": "reset_complete"}) + "\n").encode("utf-8"))
                 continue
 
@@ -283,7 +312,26 @@ def main():
                 pos = max(minT, pos)
                 pos = min(maxT, pos)
 
-            motors[i].setVelocity(0.4)
+            #motors[i].setVelocity(0.4)
+
+            # WARNING
+            # WARNING
+            # WARNING
+            # WARNING
+            # WARNING
+
+
+            # TODO: Add communication abilities to have unlocked
+            # TODO: velocity ONLY on expert mode
+            # velocity temporarily unlocked for all modes due to
+            # expert having issues
+
+            motors[i].setVelocity(getExpertVelocity(MOTOR_EXPLANATION[i]))
+
+            # TODO: When using GAIL, the motors[i] should be initialized
+            # with the MOTOR_EXPLANATION and not names, as thats the order
+            # GAIL expects. I don't remember why i changed the order, maybe
+            # to make the max and min above easier.
             motors[i].setPosition(pos)
             
                                             # ---------- Sensor Readings ---------- #
@@ -344,7 +392,7 @@ def main():
             "foot_contacts": foot_values, # 6 values
 
             # center of mass (x,y,z)
-            "com": com, # 3 values
+            #" com": com, # 3 values
 
             # robot distance to the ground
             #"lidar": lidar_values # 3 values (previous implementation)

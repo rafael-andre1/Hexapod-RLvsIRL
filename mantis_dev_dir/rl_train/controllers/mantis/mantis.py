@@ -162,7 +162,11 @@ def main():
 
     # custom values (simple integrity guide, manually set)
     # only lowering aC to avoid leg crossing
-    aC /= 1.5
+
+    # TODO: LOWEST AC ONLY WHEN TASK == STAND_UP!!!
+
+    aC /= 3
+    #aC /= 1.5
     aF *= 8
     aT *= 30
 
@@ -326,7 +330,8 @@ def main():
             # velocity temporarily unlocked for all modes due to
             # expert having issues
 
-            motors[i].setVelocity(getExpertVelocity(MOTOR_EXPLANATION[i]))
+            #motors[i].setVelocity(getExpertVelocity(MOTOR_EXPLANATION[i]))
+            motors[i].setVelocity(0.8)
 
             # TODO: When using GAIL, the motors[i] should be initialized
             # with the MOTOR_EXPLANATION and not names, as thats the order

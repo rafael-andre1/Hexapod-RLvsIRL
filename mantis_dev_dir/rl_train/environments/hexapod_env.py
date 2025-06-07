@@ -90,15 +90,13 @@ class HexapodEnv(gym.Env):
         # for "stand up"
         if step_count % 100 == 0:
             print("Step: ", step_count)
-        if (self.task == "stand_up" and
-                ((step_count >= max_steps) or
-                (self.stable_counter >= 800 and self.is_tilted == False))):
+        if (self.task == "stand_up" and (step_count >= max_steps)):
+                 #or (self.stable_counter >= 800 and self.is_tilted == False))):
             return True
 
         # TODO: Add communication abilities to have unlocked
         # TODO: episode length ONLY on expert mode (stops when lengths differ)
-        if (self.task == "walk" and
-                ((step_count >= max_steps*3)
+        if (self.task == "walk" and ((step_count >= max_steps*3)
                  #or(self.is_tilted == False and abs(self.cur_dist) >= 10)
         )):
             return True

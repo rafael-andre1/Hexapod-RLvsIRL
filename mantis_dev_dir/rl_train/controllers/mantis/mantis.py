@@ -161,7 +161,7 @@ def main():
     # custom values (simple integrity guide, manually set)
     # only lowering aC to avoid leg crossing
     aC /= 3
-    aF *= 8
+    aF *= 5
     aT *= 30
 
 

@@ -105,8 +105,8 @@ class HexapodEnv(gym.Env):
         if step_count % 100 == 0: print("Step: ", step_count)
 
         # "Done" is only for step limit, otherwise -> reward leak
-        if (self.task == "stand_up" and (step_count >= max_steps)): return True
-        if (self.task == "walk" and (step_count >= max_steps*3)): return True
+        if (self.task == "stand_up" and (step_count > max_steps)): return True
+        if (self.task == "walk" and (step_count > max_steps*3)): return True
         return False
 
     def _log_step(self, x, y, z, stab, height, walk, total):
@@ -196,8 +196,9 @@ class HexapodEnv(gym.Env):
         # Compute total
         reward = stability_reward + height_reward + walk_reward
 
-        # Logs every 500 time steps (easier for plotting)
-        if self.cur_overall_step % 500 == 0:
+        # Logs every 200 time steps (easier for plotting, and still captures evolution)
+        # This way, every 3 lines are equivalent to an entire episode
+        if self.cur_overall_step % 200 == 0:
             self._log_step(x, y, z, stability_reward, height_reward, walk_reward, reward)
 
         return reward

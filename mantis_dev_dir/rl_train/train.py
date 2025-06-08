@@ -101,7 +101,7 @@ if not expert_choice:
 
     elif task == "stand_up":
         if model_choice == "PPO": model = PPO("MlpPolicy", env, verbose=1, device=device)
-        elif model_choice == "A2C": model = PPO("MlpPolicy", env, verbose=1, device=device)
+        elif model_choice == "A2C": model = A2C("MlpPolicy", env, verbose=1, device=device)
         elif model_choice == "DDPG": model = DDPG("MlpPolicy", env, verbose=1, device=device)
         else: print("No model with such designation!")
 

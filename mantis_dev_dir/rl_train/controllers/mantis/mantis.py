@@ -54,7 +54,7 @@ if not connected:
 
 # --------------------------------------------------------- #
 
-
+# Integrity Limits Velocity Cap
 def cappedVelocity(cur_pos, vel, max_pos, min_pos, timestep=1000):
     # Max and Min velocity values based on previously defined integrity limits
     v_max, v_min = ((max_pos - cur_pos) / timestep), ((min_pos - cur_pos) / timestep)
@@ -65,7 +65,7 @@ def cappedVelocity(cur_pos, vel, max_pos, min_pos, timestep=1000):
     # finally, prevent from going under the minimum value
     return max(v_min, v_capped)
 
-
+# Velocity for Expert Mode (GAIL) (0.8 -> overall best results)
 def getExpertVelocity(motor_name):
     # Average velocities computed over the time steps (from 0.02s to 0.05s)
     # of the first few actions of the expert
@@ -97,14 +97,12 @@ def getExpertVelocity(motor_name):
 
     return abs(avg_velocities[motor_name])
 
-
 print("Entered RL Controller.")
 
 #os.environ["WEBOTS_HOME"] = '/usr/local/webots'
 
 def main():
     robot = Supervisor()
-    #robot = Robot()
     timestep = int(robot.getBasicTimeStep())
     is_supervisor = hasattr(robot, 'getSelf')
 
@@ -124,7 +122,7 @@ def main():
     # Anterior -> "face" of the robot
     # Posterior -> back of the robot
 
-    MOTOR_EXPLANATION = [
+    MOTOR_NAMES = [
         "RPC", "RPF", "RPT",  # Right Posterior Controls
         "RMC", "RMF", "RMT",  # Right Middle Controls
         "RAC", "RAF", "RAT",  # Right Anterior Controls
@@ -137,7 +135,7 @@ def main():
 
     # Important to mention that angles are inverted in C hinges 
     # (one side moves forward when value is applied, other moves backwards)
-    MOTOR_NAMES = [
+    MOTOR_EXPLANATION = [
         "RPC", "RMC", "RAC", "LPC", "LMC", "LAC", # Base (shoulder1, front-backward) motors
         "RPF", "RMF", "RAF", "LPF", "LMF", "LAF", # Base (shoulder2, up_down) motors
         "RPT", "RMT", "RAT", "LPT", "LMT", "LAT"  # Hinge (elbow, up-down) motors
@@ -162,11 +160,7 @@ def main():
 
     # custom values (simple integrity guide, manually set)
     # only lowering aC to avoid leg crossing
-
-    # TODO: LOWEST AC ONLY WHEN TASK == STAND_UP!!!
-
     aC /= 3
-    #aC /= 1.5
     aF *= 8
     aT *= 30
 
@@ -174,19 +168,25 @@ def main():
     # dC,dF,dT = 0.60, 0.80, -2.40           # offsets (theoretically, centers, but not working)
     dC, dF, dT = 0, 0.8, -2.4
 
-    minC, maxC = dC - aC, dC + aC 
-    minF, maxF = dF - aF, dF + aT
-    minT, maxT = dT - aT, dT + aT
+    MINC, MAXC = dC - aC, dC + aC
+    MINF, MAXF = dF - aF, dF + aT
+    MINT, MAXT = dT - aT, dT + aT
 
+    # Normalizes Positions
+    def normalizePos(motor_name, posit):
+        if motor_name.endswith("C"):
+            posit = max(MINC, posit)
+            return min(MAXC, posit)
+        elif motor_name.endswith("F"):
+            posit = max(MINF, posit)
+            return min(MAXF, posit)
+        elif motor_name.endswith("T"):
+            posit = max(MINT, posit)
+            return min(MAXT, posit)
+        print("WRONG NAMES!!!")
 
     # --------------- IMU  --------------- #
     imu = robot.getDevice("inertial unit")
-    #gyro = robot.getDevice("gyro")
-    #acc = robot.getDevice("accelerometer")
-    """
-    for s in (imu, gyro, acc):
-        if s:
-            s.enable(timestep)"""
     imu.enable(timestep)
 
     # --------------- Foot Contact Sensors --------------- #
@@ -194,37 +194,35 @@ def main():
     feet = []
     for name in FOOT_NAMES:
         ts = robot.getDevice(name)
-        if ts:
-            ts.enable(timestep)
-        else:
-            print(f"[warn] foot sensor {name} not found")
+        if ts: ts.enable(timestep)
+        else: print(f"[warn] foot sensor {name} not found")
         feet.append(ts)
 
-    # --------------- Center Of Mass --------------- #
-    if is_supervisor:
-        robot_node = robot.getSelf()
-
+    # --------------- Useful for Translation --------------- #
+    if is_supervisor: robot_node = robot.getSelf()
 
     # --------------- Robot and Elbows Frames --------------- #
-
     elbow_hinges_frames = []
 
     # Get a specific hinge/joint node
     elbow_hinges = ["RPT", "RMT", "RAT", "LPT", "LMT", "LAT" ]
     for h in elbow_hinges:
         elbow_joint_node = robot.getFromDef(h+"_HINGE_JOINT")
-        # print(h, ":", elbow_joint_node)
         if elbow_joint_node == None: continue
         elbow_translation_field = elbow_joint_node.getField("translation")
         elbow_hinges_frames.append(elbow_translation_field)
+
+
+
 
                                 # ---------------------------------------------------- #
                                 # --------------- Main Simulation Loop --------------- #
                                 # ---------------------------------------------------- #
 
 
-    while robot.step(timestep) != -1:
 
+
+    while robot.step(timestep) != -1:
         # Receive motor positions, apply actions
         data = sock.recv(4096)
 
@@ -240,15 +238,10 @@ def main():
 
 
             # ---------- Reset Pose ---------- #
-
-            # TODO: Random resets
             if isinstance(message, dict) and message.get("command") == "reset":
                 print("[Controller] Reset em curso...")
                 if is_supervisor:
                     robot.simulationReset()
-
-                    # Only needs to be done once if world is correctly saved
-                    # otherwise, disable actions and run this once, then save
                 sock.sendall((json.dumps({"status": "reset_complete"}) + "\n").encode("utf-8"))
                 continue
 
@@ -268,8 +261,10 @@ def main():
         for motor in motors:
             joint_values.append(motor.getTargetPosition())
 
-
-        """
+        """ IMPORTANT IF YOU OVERWRITE THE INITIAL POSITION!
+        
+        # Only needs to be done once if world is correctly saved
+        # otherwise, DISABLE ACTIONS and run this once, then save
         
             for i in range(18):
             vel = action[i]
@@ -293,125 +288,34 @@ def main():
         
         """
 
+        # Actions
         for i in range(18):
-            # Normalizing motor input values (for safety and stability)
-            #min_pos, max_pos = motors[i].getMinPosition(), motors[i].getMaxPosition()
-            #pos = 0.5 * (action[i] + 1) * (max_pos - min_pos) + min_pos
-            pos=action[i]
+            pos = action[i]
 
             # Normalizing to integrity limits based on "body part"
+            pos = normalizePos(MOTOR_NAMES[i], pos)
 
-            # First 6 are C motors: shoulder forward-backward
-            if i<6:
-                pos = max(minC, pos)
-                pos = min(maxC, pos)
-
-            # The following 6 are F motors: shoulder up-down
-            elif i<12:
-                pos = max(minF, pos)
-                pos = min(maxF, pos)
-
-            # Final are T motors: elbow up-down
-            elif i<18:
-                pos = max(minT, pos)
-                pos = min(maxT, pos)
-
-            #motors[i].setVelocity(0.4)
-
-            # WARNING
-            # WARNING
-            # WARNING
-            # WARNING
-            # WARNING
-
-
-            # TODO: Add communication abilities to have unlocked
-            # TODO: velocity ONLY on expert mode
-            # velocity temporarily unlocked for all modes due to
-            # expert having issues
-
-            #motors[i].setVelocity(getExpertVelocity(MOTOR_EXPLANATION[i]))
-            motors[i].setVelocity(0.8)
-
-            # TODO: When using GAIL, the motors[i] should be initialized
-            # with the MOTOR_EXPLANATION and not names, as thats the order
-            # GAIL expects. I don't remember why i changed the order, maybe
-            # to make the max and min above easier.
+            # Usually the most stable
+            motors[i].setVelocity(0.75)
             motors[i].setPosition(pos)
             
                                             # ---------- Sensor Readings ---------- #
 
         # IMU
         roll, pitch, yaw = imu.getRollPitchYaw()
-        # ax, ay, az = acc.getValues() if acc else (0.0, 0.0, 0.0)
-        #acc_norm = math.sqrt(ax * ax + ay * ay + az * az)
         imu_values = [roll, pitch, yaw]
-
-        # Read joint sensor rad values (after applying velocity)
-        joint_values = []
-        #print("---------------------------------------")
-        for motor in motors:
-            #print("Positional sensor value: ", math.degrees(sensor.getValue()))
-            joint_values.append(motor.getTargetPosition())
-        #print("---------------------------------------")
-
-
-        """
-        for h in elbow_hinges_frames:
-            print(h)
-            hinge_position = h.getSFVec3f()
-            hinge_height = hinge_position[2]
-            hinge_robot_diff = hinge_height - robot_height
-            joint_robot_hdiff.append(hinge_robot_diff)
-        """
-        
-
-        # Read foot contact sensor values
-        foot_values = [ts.getValue() for ts in feet]
-
-        # Get center of mass approximation (using the robot's translation field)
-        com = robot_node.getCenterOfMass()
 
         # Get the robot's position (also using the robot's translation field)
         robot_pose = list(robot_node.getField("translation").getSFVec3f())
 
-        """ Unfortunately, sensors do not work.
-        # Reads point cloud values
-        point_cloud = lidar.getPointCloud()
-
-        # We only want to see "forward": lidar points to the floor
-        lidar_values = [p.x for p in point_cloud]
-        print(lidar_values)
-        """
-
         # Collection of all relevant sensor/supervisor values
         observation = {
-            # joint angles
-            #"joint_robot_hdiff": joint_robot_hdiff,
-            "joint_sensors" : joint_values, # 18 values
-
             # roll, pitch and yaw
             "imu": imu_values, # 3 values
 
-            # foot contact sensor values
-            "foot_contacts": foot_values, # 6 values
-
-            # center of mass (x,y,z)
-            #" com": com, # 3 values
-
-            # robot distance to the ground
-            #"lidar": lidar_values # 3 values (previous implementation)
-            "robot_pose": robot_pose # 3 values
-
+            # robot translation
+            "robot_pose": robot_pose  # 3 values
         }
-
-        """
-        observation = {
-            "joint_sensors": [random.uniform(-1.0, 1.0) for _ in range(6)],
-            "imu": [random.uniform(-0.5, 0.5), random.uniform(-1, 1)],
-            "foot_contacts": [random.randint(0, 1) for _ in range(6)],
-            "com": [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]
-        }"""
         sock.sendall(json.dumps(observation).encode('utf-8'))
 
 

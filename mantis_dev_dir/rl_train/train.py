@@ -1,12 +1,25 @@
-from environments.hexapod_env import HexapodEnv
-from stable_baselines3 import PPO
+# ---------------- Requirements ---------------- #
 
+# RL
+from environments.hexapod_env import HexapodEnv
+from stable_baselines3 import PPO, A2C, DDPG
+
+# IRL
+from imitation.algorithms.adversarial.gail import GAIL
+from imitation.rewards.reward_nets import BasicRewardNet
+from stable_baselines3.common.vec_env import DummyVecEnv
+from imitation.data.types import Trajectory
+import pandas as pd
+
+# Benchmarking
+import os
 from tqdm import tqdm
 from stable_baselines3.common.callbacks import BaseCallback
 
-import pandas as pd
+# Device
 import torch
-import os
+# ---------------------------------------------- #
+
 
 # Custom callbacks (times function for runtime prediction)
 class TqdmCallback(BaseCallback):
@@ -25,39 +38,39 @@ class TqdmCallback(BaseCallback):
         self.progress_bar.close()
         self.progress_bar = None
 
+def get_unique_model_name(base_name):
+    counter = 1
+    while os.path.exists(f"{base_name}_{counter}.zip"):
+        counter += 1
+    return f"{base_name}_{counter}"
 
-# -------------------------- Training -------------------------- #
-
-# Task Choice
-
-task = input("What's the task? ")
-
-# Environment setup
-env = HexapodEnv(task)
-
-# Select gpu if available, otherwise cpu
+# ------------------- Device Setup ------------------- #
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("\n#########################################")
 print(f"#######  Using device: {device}   #######")
 print("#########################################\n")
-
-
-"""
-print("############################")
-print("#######   WARNING    #######")
-print("############################")
-print("ACTIONS CURRENTLY DISABLED FOR INITIAL OBS READING")
-"""
-
-# ------------------------- Model Choice ---------------------- #
+# ---------------------------------------------------- #
 
 
 
-expert_choice = input("Would you like to use an expert?")
 
+                                # ------------------------- Model Choice ---------------------- #
+
+# Task Choice
+task = input("What's the task? ")
+
+# Model Choice
+model_choice = input("Which model do you want to use? (PPO, A2C, DDPG) ")
+
+# Expert Option
+expert_choice = input("Would you like to use an expert? ")
+expert_choice = True if expert_choice == "yes" else False
+
+# Environment setup
+env = HexapodEnv(task, model_choice, expert_choice)
 
 # Raw RL
-if expert_choice != "yes":
+if not expert_choice:
 
     print("\n-----------------------------")
     print("--- NOT Using Expert !!! ----")
@@ -65,21 +78,50 @@ if expert_choice != "yes":
 
     if task == "walk":
         choice = str(input("Would you like to use transfer learning for walking? "))
+
+        # TODO: Currently supports only PPO!
+        # Choose your preferred model for transfer
         model_path=r"C:\Users\hasht\Desktop\saved_model"
-        if choice == "yes": model = PPO.load(model_path+"\\hexapod_ppo_bestStandUp", env=env, device=device)
-    else: model = PPO("MlpPolicy", env, verbose=1, device=device)
 
-    # Model training
-    if task == "stand_up": model.learn(total_timesteps=180000, callback=TqdmCallback())
-    else: model.learn(total_timesteps=250000, callback=TqdmCallback()) # for walk
-    model.save("hexapod_ppo_model")
-    env.close()
+        # model = PPO.load(model_path+"\\hexapod_ppo_bestStandUp", env=env, device=device)
+        if choice == "yes": model = PPO.load("hexapod_ppo_model", env=env, device=device)
 
-# Using Expert
+        try:
+            model.learn(total_timesteps=250000, callback=TqdmCallback())
+        finally:
+            # Always runs, even on interrupt or crash 
+            print("Saving model and closing environment...")
+            
+            # Avoid overwrite
+            base_model_name = f"hexapod_{model_choice}_model"
+            unique_model_name = get_unique_model_name(base_model_name)
+            model.save(unique_model_name)
+            env.close()
+
+
+    elif task == "stand_up":
+        if model_choice == "PPO": model = PPO("MlpPolicy", env, verbose=1, device=device)
+        elif model_choice == "A2C": model = PPO("MlpPolicy", env, verbose=1, device=device)
+        elif model_choice == "DDPG": model = DDPG("MlpPolicy", env, verbose=1, device=device)
+        else: print("No model with such designation!")
+
+        try:
+            model.learn(total_timesteps=180000, callback=TqdmCallback())
+        finally:
+            # Always runs, even on interrupt or crash 
+            print("Saving model and closing environment...")
+            
+            # Avoid overwrite
+            base_model_name = f"hexapod_{model_choice}_model"
+            unique_model_name = get_unique_model_name(base_model_name)
+            model.save(unique_model_name)
+            env.close()
+
+# Inverse RL
 elif task == "walk":
+    
     # Expert Setup
-
-    from imitation.data.types import Trajectory
+    
     df = pd.read_csv(r"gail_data\expert_data.csv")
 
     # Separate obs and values
@@ -95,10 +137,6 @@ elif task == "walk":
     # Now that we have the actions, we can define what's called a trajectory
     traj = Trajectory(obs=obs, acts=acts, infos=None, terminal=True)
     traj_list = [traj]
-
-    from imitation.algorithms.adversarial.gail import GAIL
-    from imitation.rewards.reward_nets import BasicRewardNet
-    from stable_baselines3.common.vec_env import DummyVecEnv
 
     print("\n-----------------------------")
     print("------- Using Expert !!! ----")
@@ -130,7 +168,7 @@ elif task == "walk":
     )
 
     # Currently testing only
-    gail_trainer.train(75000)
+    gail_trainer.train(100000)
     gail_trainer.gen_algo.save("gail_hexapod_model")
 
 else: print("Not possible to do that task while using an expert. Sorry!")

@@ -185,6 +185,7 @@ class HexapodEnv(gym.Env):
             else: height_reward -= 4
 
             if self.task == 'walk':
+
                 # Walking forward is -x (negative) difference and 0 y difference
                 # so if I take points for negative (x plus y), I reward it
                 # when it walks forward, in a straight line
@@ -200,6 +201,12 @@ class HexapodEnv(gym.Env):
         # This way, every 3 lines are equivalent to an entire episode
         if self.cur_overall_step % 200 == 0:
             self._log_step(x, y, z, stability_reward, height_reward, walk_reward, reward)
+
+        if self.task == "walk":
+            # Standing up straight is still important,
+            # but only as a baseline, so we halved the reward
+            reward = (stability_reward + height_reward) / 2
+            reward += height_reward
 
         return reward
 

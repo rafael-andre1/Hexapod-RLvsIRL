@@ -62,9 +62,13 @@ task = input("What's the task? ")
 # Model Choice
 model_choice = input("Which model do you want to use? (PPO, A2C, DDPG) ")
 
+# Transfer Learning Option
+choice = str(input("Would you like to use transfer learning for walking? (No expert, no DDPG!) "))
+
 # Expert Option
 expert_choice = input("Would you like to use an expert? ")
 expert_choice = True if expert_choice == "yes" else False
+
 
 # Environment setup
 env = HexapodEnv(task, model_choice, expert_choice)
@@ -77,14 +81,9 @@ if not expert_choice:
     print("-----------------------------\n")
 
     if task == "walk":
-        choice = str(input("Would you like to use transfer learning for walking? "))
-
-        # TODO: Currently supports only PPO!
-        # Choose your preferred model for transfer
-        model_path=r"C:\Users\hasht\Desktop\saved_model"
-
-        # model = PPO.load(model_path+"\\hexapod_ppo_bestStandUp", env=env, device=device)
-        if choice == "yes": model = PPO.load("hexapod_ppo_model", env=env, device=device)
+        model_path=r"C:\\Users\\hasht\\Desktop\\stand_up - models and logs"
+        if choice == "yes":
+            model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
 
         try:
             model.learn(total_timesteps=250000, callback=TqdmCallback())
@@ -122,7 +121,7 @@ elif task == "walk":
     
     # Expert Setup
     
-    df = pd.read_csv(r"gail_data\expert_data.csv")
+    df = pd.read_csv(r"gail_data\clean_expert.csv")
 
     # Separate obs and values
     acts = df.iloc[:, 1:19].values # Starts at index 1, finishes at index 19-1 == 18
@@ -148,7 +147,10 @@ elif task == "walk":
     policy_kwargs = dict(net_arch=[64, 64])
 
     # Learner model
-    learner = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)
+    model_path = r"C:\\Users\\hasht\\Desktop\\stand_up - models and logs"
+    if choice == "yes":
+        learner = PPO.load(model_path + f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+    else: learner = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)
 
     # Computes GAIL-based rewards
     reward_net = BasicRewardNet(
@@ -168,7 +170,7 @@ elif task == "walk":
     )
 
     # Currently testing only
-    gail_trainer.train(100000)
+    gail_trainer.train(150000)
     gail_trainer.gen_algo.save("gail_hexapod_model")
 
 else: print("Not possible to do that task while using an expert. Sorry!")

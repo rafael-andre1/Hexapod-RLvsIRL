@@ -63,10 +63,10 @@ task = input("What's the task? ")
 model_choice = input("Which model do you want to use? (PPO, A2C, DDPG) ")
 
 # Transfer Learning Option
-choice = str(input("Would you like to use transfer learning for walking? (No expert, no DDPG!) "))
+choice = str(input("Would you like to use transfer learning for walking? (No DDPG!) "))
 
 # Expert Option
-expert_choice = input("Would you like to use an expert? ")
+expert_choice = input("Would you like to use an expert? (Only works with PPO and A2C!) ")
 expert_choice = True if expert_choice == "yes" else False
 
 
@@ -149,7 +149,10 @@ elif task == "walk":
     # Learner model
     model_path = r"saved_models\stand_up - models and logs"
     if choice == "yes":
-        learner = PPO.load(model_path + f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+        if model_choice == "PPO":
+            learner = PPO.load(model_path + f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+        else:
+            learner = A2C.load(model_path + f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
     else: learner = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)
 
     # Computes GAIL-based rewards

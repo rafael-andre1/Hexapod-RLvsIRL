@@ -147,7 +147,7 @@ elif task == "walk":
     policy_kwargs = dict(net_arch=[64, 64])
 
     # Learner model
-    model_path = r"C:\\Users\\hasht\\Desktop\\stand_up - models and logs"
+    model_path = r"saved_models\stand_up - models and logs"
     if choice == "yes":
         learner = PPO.load(model_path + f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
     else: learner = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)

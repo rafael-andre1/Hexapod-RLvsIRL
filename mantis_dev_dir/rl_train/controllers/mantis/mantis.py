@@ -8,7 +8,7 @@ from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, T
 
 # Socket Initialization
 
-"""
+""" 
 Este socket TCP (Transmission Control Protocol) permite troca de infomração bidirecional entre 2 ficheiros de python.
 Para evitar correr a simulação inteira na UI do webots, utilizamos este socket para treinar apenas em python.
 Essencialmente, o environment de gymnasium cria um servidor local, ao qual `controller.py` vai aceder.

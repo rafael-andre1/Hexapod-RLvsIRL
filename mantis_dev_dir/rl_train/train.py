@@ -83,8 +83,8 @@ if not expert_choice:
     if task == "walk":
         model_path=r"saved_models\\stand_up - models and logs"
         if choice == "yes":
-            model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
-
+            if model_choice=="PPO": model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+            elif model_choice=="A2C": model = A2C.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
         try:
             model.learn(total_timesteps=250000, callback=TqdmCallback())
         finally:

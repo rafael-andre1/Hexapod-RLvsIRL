@@ -39,15 +39,16 @@ if is_port_in_use(5000):
 
 
 class HexapodEnv(gym.Env):
-    def __init__(self, task, model="PPO", expert=False):
+    def __init__(self, task, model, expert=False):
         super().__init__()
+        print(f"Initializing {task} Hexapod...")
         self.task = task
         self.expert = expert
         self.model = model
         if self.expert: print("Environment recognizes expert!")
 
-        # Action space -> 18 actuators
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(18,), dtype=np.float32)
+        # Action space -> 18 actuators -> 9 symmetric actions
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(9,), dtype=np.float32)
 
         # Observation Space -> 6 values
         self.observation_space = spaces.Box(low=-1, high=1, shape=(OBS_SPACE_SIZE,), dtype=np.float32)
@@ -201,7 +202,7 @@ class HexapodEnv(gym.Env):
                 # when it walks forward, in a straight line
                 self.cur_dist = robot_pose[0]
                 if stability_reward >= 1:
-                    walk_reward -= 5*(robot_pose[0] + robot_pose[0])
+                    walk_reward -= 5*(robot_pose[0])
                 else: walk_reward -= 1
 
         # Compute total
@@ -216,8 +217,9 @@ class HexapodEnv(gym.Env):
         if self.task == "walk":
             # Standing up straight is still important,
             # but only as a baseline, so we halved the reward
-            reward = (stability_reward + height_reward) / 2
-            reward += walk_reward
+            #reward = (stability_reward + height_reward) / 2
+            reward = walk_reward
+            if self.cur_overall_step % 200 == 0: print(reward)
 
         return reward
 

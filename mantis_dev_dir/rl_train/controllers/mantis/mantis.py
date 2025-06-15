@@ -131,6 +131,8 @@ def main():
     # Anterior -> "face" of the robot
     # Posterior -> back of the robot
 
+    # This code already uses symmetry!
+
     MOTOR_NAMES = [
         "RPC", "RPF", "RPT",  # Right Posterior Controls
         "RMC", "RMF", "RMT",  # Right Middle Controls
@@ -297,8 +299,8 @@ def main():
         
         """
 
-        # Actions
-        for i in range(18):
+        # Actions (using symmetry!)
+        for i in range(9):
             pos = action[i]
 
             # Normalizing to integrity limits based on "body part"
@@ -307,6 +309,9 @@ def main():
             # Usually the most stable
             motors[i].setVelocity(0.75)
             motors[i].setPosition(pos)
+
+            motors[i+9].setVelocity(0.75)
+            motors[i+9].setPosition(pos)
             
                                             # ---------- Sensor Readings ---------- #
 

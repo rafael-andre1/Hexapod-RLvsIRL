@@ -6,15 +6,6 @@ import numpy as np
 import time
 from controller import Robot, Motor, InertialUnit, Supervisor, PositionSensor, TouchSensor
 
-##########################################################
-##########################################################
-##############         Warning!!!          ###############
-##########################################################
-##########################################################
-
-# This code is a modified version, it'll take into account new suggestions
-
-
 # Socket Initialization
 
 """ 

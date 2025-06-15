@@ -81,7 +81,7 @@ if not expert_choice:
     print("-----------------------------\n")
 
     if task == "walk":
-        model_path=r"C:\\Users\\hasht\\Desktop\\stand_up - models and logs"
+        model_path=r"saved_models\\stand_up - models and logs"
         if choice == "yes":
             model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
 

@@ -1,14 +1,4 @@
 # environments/hexapod_env.py
-
-##########################################################
-##########################################################
-##############         Warning!!!          ###############
-##########################################################
-##########################################################
-
-# This code is a modified version, it'll take into account new suggestions
-
-
 import gymnasium as gym
 from gymnasium import spaces
 import os
@@ -201,7 +191,7 @@ class HexapodEnv(gym.Env):
                 # when it walks forward, in a straight line
                 self.cur_dist = robot_pose[0]
                 if stability_reward >= 1:
-                    walk_reward -= 5*(robot_pose[0] + robot_pose[0])
+                    walk_reward -= 2*(robot_pose[0] + robot_pose[0])
                 else: walk_reward -= 1
 
         # Compute total
@@ -212,12 +202,11 @@ class HexapodEnv(gym.Env):
         if self.cur_overall_step % 200 == 0:
             self._log_step(x, y, z, stability_reward, height_reward, walk_reward, reward)
 
-
         if self.task == "walk":
             # Standing up straight is still important,
             # but only as a baseline, so we halved the reward
             reward = (stability_reward + height_reward) / 2
-            reward += walk_reward
+            reward += height_reward
 
         return reward
 

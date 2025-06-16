@@ -37,14 +37,22 @@ def is_port_in_use(port, host="127.0.0.1"):
 if is_port_in_use(5000):
     raise RuntimeError("Port 5000 is already in use. Please close existing process.")
 
+def checkDist(dist):
+    if -10 <= dist <= -8: return 20
+    elif -8 <= dist <= -6: return 10
+    elif -6 <= dist <= -2: return 5
+    else: return -3
+
+
 
 class HexapodEnv(gym.Env):
-    def __init__(self, task, model, expert=False):
+    def __init__(self, task, model, transfer_choice, expert=False):
         super().__init__()
         print(f"Initializing {task} Hexapod...")
         self.task = task
         self.expert = expert
         self.model = model
+        self.transfer_choice = transfer_choice
         if self.expert: print("Environment recognizes expert!")
 
         # Action space -> 18 actuators -> 9 symmetric actions
@@ -95,7 +103,8 @@ class HexapodEnv(gym.Env):
         self.csv_file = None
 
         # Setup logging file (no overwrites)
-        filename_base = f"{self.task}_{self.model}_{'IRL' if self.expert else 'RL'}"
+        transfer_flag = "transfer" if self.transfer_choice == "yes" else ""
+        filename_base = f"{self.task}_{self.model}_{'IRL' if self.expert else 'RL'}_{transfer_flag}"
         file_dir = Path("logs")
         file_dir.mkdir(exist_ok=True)
         suffix = 0
@@ -144,6 +153,8 @@ class HexapodEnv(gym.Env):
 
         # Rolling over or being very tilted is highly penalized
         return -5
+
+
             
 
 
@@ -201,8 +212,7 @@ class HexapodEnv(gym.Env):
                 # so if I take points for negative (x plus y), I reward it
                 # when it walks forward, in a straight line
                 self.cur_dist = robot_pose[0]
-                if stability_reward >= 1:
-                    walk_reward -= 5*(robot_pose[0])
+                if stability_reward >= 1: walk_reward += checkDist(self.cur_dist)
                 else: walk_reward -= 1
 
         # Compute total
@@ -217,9 +227,9 @@ class HexapodEnv(gym.Env):
         if self.task == "walk":
             # Standing up straight is still important,
             # but only as a baseline, so we halved the reward
-            #reward = (stability_reward + height_reward) / 2
-            reward = walk_reward
-            if self.cur_overall_step % 200 == 0: print(reward)
+            reward = (stability_reward + height_reward) / 2
+            reward += walk_reward
+            #if self.cur_overall_step % 200 == 0: print(reward)
 
         return reward
 

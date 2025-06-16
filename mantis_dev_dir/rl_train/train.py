@@ -63,15 +63,15 @@ task = input("What's the task? ")
 model_choice = input("Which model do you want to use? (PPO, A2C, DDPG) ")
 
 # Transfer Learning Option
-choice = str(input("Would you like to use transfer learning for walking? (No DDPG!) "))
+choice = str(input("Would you like to use transfer learning for walking? (No Pre-Trained DDPG!) "))
 
 # Expert Option
-expert_choice = input("Would you like to use an expert? (Only works with PPO and A2C!) ")
+expert_choice = input("Would you like to use an expert? (Only has Pre-Trained PPO and A2C!) ")
 expert_choice = True if expert_choice == "yes" else False
 
 
 # Environment setup
-env = HexapodEnv(task, model_choice, expert_choice)
+env = HexapodEnv(task, model_choice, choice, expert_choice)
 
 # Raw RL
 if not expert_choice:
@@ -80,11 +80,27 @@ if not expert_choice:
     print("--- NOT Using Expert !!! ----")
     print("-----------------------------\n")
 
+    # If not using expert
     if task == "walk":
         model_path=r"saved_models\\stand_up - models and logs"
+
+        # If transfer learning
         if choice == "yes":
-            if model_choice=="PPO": model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
-            elif model_choice=="A2C": model = A2C.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+            if model_choice=="PPO":
+                model = PPO.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+            elif model_choice=="A2C":
+                model = A2C.load(model_path+f"\\hexapod_{model_choice}_model_1", env=env, device=device, verbose=0)
+
+        # If not transfer learning
+        else:
+            if model_choice == "PPO":
+                model = PPO("MlpPolicy", env, verbose=1, device=device)
+            elif model_choice == "A2C":
+                model = A2C("MlpPolicy", env, verbose=1, device=device)
+            elif model_choice == "DDPG":
+                model = DDPG("MlpPolicy", env, verbose=1, device=device)
+
+        # Graceful interruption
         try:
             model.learn(total_timesteps=250000, callback=TqdmCallback())
         finally:
@@ -92,18 +108,19 @@ if not expert_choice:
             print("Saving model and closing environment...")
             
             # Avoid overwrite
-            base_model_name = f"hexapod_{model_choice}_model"
+            base_model_name = f"hexapod_{model_choice}_model_{choice_T}"
             unique_model_name = get_unique_model_name(base_model_name)
             model.save(unique_model_name)
             env.close()
 
-
+    # In case it wants to stand
     elif task == "stand_up":
         if model_choice == "PPO": model = PPO("MlpPolicy", env, verbose=1, device=device)
         elif model_choice == "A2C": model = A2C("MlpPolicy", env, verbose=1, device=device)
         elif model_choice == "DDPG": model = DDPG("MlpPolicy", env, verbose=1, device=device)
         else: print("No model with such designation!")
 
+        # Again, graceful stop
         try:
             model.learn(total_timesteps=180000, callback=TqdmCallback())
         finally:
@@ -111,7 +128,7 @@ if not expert_choice:
             print("Saving model and closing environment...")
             
             # Avoid overwrite
-            base_model_name = f"hexapod_{model_choice}_model"
+            base_model_name = f"hexapod_{model_choice}_{choice_T}"
             unique_model_name = get_unique_model_name(base_model_name)
             model.save(unique_model_name)
             env.close()
@@ -174,6 +191,6 @@ elif task == "walk":
 
     # Currently testing only
     gail_trainer.train(150000)
-    gail_trainer.gen_algo.save("gail_hexapod_model")
+    gail_trainer.gen_algo.save(f"gail_{model_choice}_{choice_T}")
 
 else: print("Not possible to do that task while using an expert. Sorry!")
